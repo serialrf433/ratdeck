@@ -36,7 +36,6 @@ bool LXMFManager::sendMessage(const RNS::Bytes& destHash, const std::string& con
     msg.status = LXMFStatus::QUEUED;
     if ((int)_outQueue.size() >= RATDECK_MAX_OUTQUEUE) { _outQueue.pop_front(); }
     _outQueue.push_back(msg);
-    if (_store) { _store->saveMessage(msg); }
     return true;
 }
 
@@ -93,6 +92,19 @@ void LXMFManager::processIncoming(const uint8_t* data, size_t len, const RNS::By
         return;
     }
     if (_rns && msg.sourceHash == _rns->destination().hash()) return;
+
+    // Deduplication: skip messages we've already processed
+    std::string msgIdHex = msg.messageId.toHex();
+    if (_seenMessageIds.count(msgIdHex)) {
+        Serial.printf("[LXMF] Duplicate message from %s (already seen)\n",
+                      msg.sourceHash.toHex().substr(0, 8).c_str());
+        return;
+    }
+    _seenMessageIds.insert(msgIdHex);
+    if ((int)_seenMessageIds.size() > MAX_SEEN_IDS) {
+        _seenMessageIds.erase(_seenMessageIds.begin());
+    }
+
     msg.destHash = destHash;
     Serial.printf("[LXMF] Message from %s (%d bytes) content_len=%d\n",
                   msg.sourceHash.toHex().substr(0, 8).c_str(), (int)len, (int)msg.content.size());
