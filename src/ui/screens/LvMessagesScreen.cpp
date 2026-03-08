@@ -96,15 +96,11 @@ void LvMessagesScreen::rebuildList() {
     for (int i = 0; i < count; i++) {
         ConvInfo ci;
         ci.peerHex = convs[i];
-        ci.hasUnread = _lxmf->unreadCount(ci.peerHex) > 0;
-        auto msgs = _lxmf->getMessages(ci.peerHex);
-        if (!msgs.empty()) {
-            const auto& last = msgs.back();
-            ci.lastTs = last.timestamp;
-            std::string prefix = last.incoming ? "Them: " : "You: ";
-            std::string content = last.content;
-            if (content.size() > 15) content = content.substr(0, 15) + "...";
-            ci.preview = prefix + content;
+        auto* s = _lxmf->getConversationSummary(ci.peerHex);
+        if (s) {
+            ci.lastTs = s->lastTimestamp;
+            ci.preview = s->lastPreview;
+            ci.hasUnread = s->unreadCount > 0;
         }
         sorted.push_back(ci);
     }

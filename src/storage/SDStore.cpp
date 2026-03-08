@@ -188,6 +188,21 @@ void SDStore::wipeDir(const char* path) {
     dir.close();
 }
 
+bool SDStore::hasExistingData() {
+    if (!_ready) return false;
+    if (SD.exists("/ratputer/config.json")) return true;
+    if (SD.exists("/ratputer/identity/identity")) return true;
+    File dir = SD.open("/ratputer/messages");
+    if (dir && dir.isDirectory()) {
+        File entry = dir.openNextFile();
+        bool found = (bool)entry;
+        if (entry) entry.close();
+        dir.close();
+        if (found) return true;
+    }
+    return false;
+}
+
 bool SDStore::formatForRatputer() {
     if (!_ready) return false;
     Serial.println("[SD] Creating Ratputer directory structure...");

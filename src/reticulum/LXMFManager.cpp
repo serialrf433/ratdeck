@@ -146,8 +146,6 @@ void LXMFManager::processIncoming(const uint8_t* data, size_t len, const RNS::By
     Serial.printf("[LXMF] Message from %s (%d bytes) content_len=%d\n",
                   msg.sourceHash.toHex().substr(0, 8).c_str(), (int)len, (int)msg.content.size());
     if (_store) { _store->saveMessage(msg); }
-    std::string peerHex = msg.sourceHash.toHex();
-    _unread[peerHex]++;
     if (_onMessage) { _onMessage(msg); }
 }
 
@@ -163,28 +161,17 @@ std::vector<LXMFMessage> LXMFManager::getMessages(const std::string& peerHex) co
 }
 
 int LXMFManager::unreadCount(const std::string& peerHex) const {
-    if (!_unreadComputed) { const_cast<LXMFManager*>(this)->computeUnreadFromDisk(); }
-    if (peerHex.empty()) {
-        int total = 0;
-        for (auto& kv : _unread) total += kv.second;
-        return total;
-    }
-    auto it = _unread.find(peerHex);
-    return (it != _unread.end()) ? it->second : 0;
+    if (!_store) return 0;
+    if (peerHex.empty()) return _store->totalUnreadCount();
+    const ConversationSummary* s = _store->getSummary(peerHex);
+    return s ? s->unreadCount : 0;
 }
 
-void LXMFManager::computeUnreadFromDisk() {
-    _unreadComputed = true;
-    if (!_store) return;
-    for (auto& conv : _store->conversations()) {
-        auto msgs = _store->loadConversation(conv);
-        int count = 0;
-        for (auto& m : msgs) { if (m.incoming && !m.read) count++; }
-        if (count > 0) _unread[conv] = count;
-    }
+const ConversationSummary* LXMFManager::getConversationSummary(const std::string& peerHex) const {
+    if (!_store) return nullptr;
+    return _store->getSummary(peerHex);
 }
 
 void LXMFManager::markRead(const std::string& peerHex) {
-    _unread[peerHex] = 0;
     if (_store) { _store->markConversationRead(peerHex); }
 }

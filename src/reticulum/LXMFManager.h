@@ -27,6 +27,7 @@ public:
     std::vector<LXMFMessage> getMessages(const std::string& peerHex) const;
     int unreadCount(const std::string& peerHex = "") const;
     void markRead(const std::string& peerHex);
+    const ConversationSummary* getConversationSummary(const std::string& peerHex) const;
 
 private:
     bool sendDirect(LXMFMessage& msg);
@@ -39,10 +40,6 @@ private:
     MessageCallback _onMessage;
     StatusCallback _statusCb;
     std::deque<LXMFMessage> _outQueue;
-
-    void computeUnreadFromDisk();
-    mutable bool _unreadComputed = false;
-    mutable std::map<std::string, int> _unread;
 
     // Deduplication: recently seen message IDs
     std::set<std::string> _seenMessageIds;

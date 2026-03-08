@@ -24,6 +24,7 @@ bool MessageStore::begin(FlashStore* flash, SDStore* sd) {
     migrateTruncatedDirs();
     initReceiveCounter();
     refreshConversations();
+    buildSummaries();
     Serial.printf("[MSGSTORE] %d conversations found, receive counter=%lu\n",
                   (int)_conversations.size(), (unsigned long)_nextReceiveCounter);
     return true;
@@ -305,6 +306,19 @@ bool MessageStore::saveMessage(const LXMFMessage& msg) {
     if (sdOk) enforceSDLimit(peerHex);
     if (flashOk) enforceFlashLimit(peerHex);
 
+    // Update summary cache
+    {
+        auto& s = _summaries[peerHex];
+        s.lastTimestamp = msg.timestamp;
+        s.lastIncoming = msg.incoming;
+        std::string prefix = msg.incoming ? "Them: " : "You: ";
+        std::string content = msg.content;
+        if (content.size() > 15) content = content.substr(0, 15) + "...";
+        s.lastPreview = prefix + content;
+        s.totalCount++;
+        if (msg.incoming && !msg.read) s.unreadCount++;
+    }
+
     return sdOk || flashOk;
 }
 
@@ -433,34 +447,53 @@ bool MessageStore::deleteConversation(const std::string& peerHex) {
     _conversations.erase(
         std::remove(_conversations.begin(), _conversations.end(), peerHex),
         _conversations.end());
+    _summaries.erase(peerHex);
     return true;
 }
 
 void MessageStore::markConversationRead(const std::string& peerHex) {
     auto markInDir = [&](auto openFn, auto writeFn, const String& dir) {
+        // Collect only incoming (_i.json) filenames
+        std::vector<String> incomingFiles;
         File d = openFn(dir.c_str());
         if (!d || !d.isDirectory()) return;
         File entry = d.openNextFile();
         while (entry) {
             if (!entry.isDirectory() && isJsonFile(entry.name())) {
-                size_t size = entry.size();
-                if (size > 0 && size < 4096) {
-                    String json = entry.readString();
-                    JsonDocument doc;
-                    if (!deserializeJson(doc, json)) {
-                        bool incoming = doc["incoming"] | false;
-                        bool isRead = doc["read"] | false;
-                        if (incoming && !isRead) {
-                            doc["read"] = true;
-                            String updated;
-                            serializeJson(doc, updated);
-                            String path = dir + "/" + entry.name();
-                            writeFn(path.c_str(), updated);
-                        }
-                    }
+                String name = entry.name();
+                int len = name.length();
+                // Check for _i.json suffix (incoming)
+                if (len >= 7 && name[len - 6] == 'i') {
+                    incomingFiles.push_back(name);
                 }
             }
             entry = d.openNextFile();
+        }
+
+        // Sort descending (newest first) to stop early at first already-read
+        std::sort(incomingFiles.begin(), incomingFiles.end(),
+                  [](const String& a, const String& b) { return a > b; });
+
+        for (const auto& fname : incomingFiles) {
+            String path = dir + "/" + fname;
+            // Read file via the appropriate storage
+            String json;
+            File f = openFn(path.c_str());
+            if (f && !f.isDirectory()) {
+                size_t size = f.size();
+                if (size > 0 && size < 4096) json = f.readString();
+                f.close();
+            }
+            if (json.length() == 0) continue;
+
+            JsonDocument doc;
+            if (deserializeJson(doc, json)) continue;
+            bool isRead = doc["read"] | false;
+            if (isRead) break; // all older must be read too
+            doc["read"] = true;
+            String updated;
+            serializeJson(doc, updated);
+            writeFn(path.c_str(), updated);
         }
     };
 
@@ -477,6 +510,117 @@ void MessageStore::markConversationRead(const std::string& peerHex) {
                   [&](const char* p, const String& d) { _flash->writeString(p, d); return true; },
                   dir);
     }
+
+    _summaries[peerHex].unreadCount = 0;
+}
+
+void MessageStore::buildSummaries() {
+    _summaries.clear();
+
+    for (const auto& peerHex : _conversations) {
+        ConversationSummary summary;
+
+        // Collect filenames from the conversation directory
+        std::vector<String> files;
+        auto collectFiles = [&](File& d) {
+            File entry = d.openNextFile();
+            while (entry) {
+                if (!entry.isDirectory() && isJsonFile(entry.name())) {
+                    files.push_back(entry.name());
+                }
+                entry = d.openNextFile();
+            }
+        };
+
+        bool loadedFromSD = false;
+        if (_sd && _sd->isReady()) {
+            String sdDir = sdConversationDir(peerHex);
+            File d = _sd->openDir(sdDir.c_str());
+            if (d && d.isDirectory()) {
+                collectFiles(d);
+                loadedFromSD = true;
+            }
+        }
+        if (!loadedFromSD && _flash) {
+            String dir = conversationDir(peerHex);
+            File d = LittleFS.open(dir);
+            if (d && d.isDirectory()) {
+                collectFiles(d);
+            }
+        }
+
+        summary.totalCount = (int)files.size();
+
+        if (files.empty()) {
+            _summaries[peerHex] = summary;
+            continue;
+        }
+
+        // Sort filenames — highest counter = most recent (last element)
+        std::sort(files.begin(), files.end());
+
+        // Read the last file for preview/timestamp
+        String lastFilename = files.back();
+        String basePath = loadedFromSD ? sdConversationDir(peerHex) : conversationDir(peerHex);
+        String lastPath = basePath + "/" + lastFilename;
+
+        auto readJsonFile = [&](const String& path) -> String {
+            if (loadedFromSD && _sd && _sd->isReady()) {
+                return _sd->readString(path.c_str());
+            } else if (_flash) {
+                return _flash->readString(path.c_str());
+            }
+            return String("");
+        };
+
+        String json = readJsonFile(lastPath);
+        if (json.length() > 0) {
+            JsonDocument doc;
+            if (!deserializeJson(doc, json)) {
+                summary.lastTimestamp = doc["ts"] | 0.0;
+                std::string content = doc["content"] | "";
+                summary.lastIncoming = doc["incoming"] | false;
+                std::string prefix = summary.lastIncoming ? "Them: " : "You: ";
+                if (content.size() > 15) content = content.substr(0, 15) + "...";
+                summary.lastPreview = prefix + content;
+            }
+        }
+
+        // Count unreads: scan _i.json files (incoming), newest first, stop at first already-read
+        int unread = 0;
+        for (int i = (int)files.size() - 1; i >= 0; i--) {
+            const String& fname = files[i];
+            // Only check incoming files (suffix _i.json)
+            int flen = fname.length();
+            if (flen < 7 || fname[flen - 6] != 'i') continue; // not _i.json
+
+            String fpath = basePath + "/" + fname;
+            String fjson = readJsonFile(fpath);
+            if (fjson.length() > 0) {
+                JsonDocument fdoc;
+                if (!deserializeJson(fdoc, fjson)) {
+                    bool isRead = fdoc["read"] | false;
+                    if (isRead) break; // all older messages must be read too
+                    unread++;
+                }
+            }
+        }
+        summary.unreadCount = unread;
+        _summaries[peerHex] = summary;
+    }
+
+    Serial.printf("[MSGSTORE] Built summaries for %d conversations\n", (int)_summaries.size());
+}
+
+const ConversationSummary* MessageStore::getSummary(const std::string& peerHex) const {
+    auto it = _summaries.find(peerHex);
+    return (it != _summaries.end()) ? &it->second : nullptr;
+}
+
+int MessageStore::totalUnreadCount() const {
+    int total = 0;
+    for (const auto& kv : _summaries) total += kv.second.unreadCount;
+    return total;
 }
 
 String MessageStore::conversationDir(const std::string& peerHex) const {

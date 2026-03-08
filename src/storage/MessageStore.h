@@ -8,6 +8,14 @@
 #include <string>
 #include <map>
 
+struct ConversationSummary {
+    double lastTimestamp = 0;
+    std::string lastPreview;    // first ~20 chars of last message
+    bool lastIncoming = false;
+    int unreadCount = 0;
+    int totalCount = 0;
+};
+
 class MessageStore {
 public:
     bool begin(FlashStore* flash, SDStore* sd = nullptr);
@@ -20,6 +28,9 @@ public:
     bool deleteConversation(const std::string& peerHex);
     void markConversationRead(const std::string& peerHex);
 
+    const ConversationSummary* getSummary(const std::string& peerHex) const;
+    int totalUnreadCount() const;
+
 private:
     String conversationDir(const std::string& peerHex) const;
     String sdConversationDir(const std::string& peerHex) const;
@@ -28,9 +39,11 @@ private:
     void migrateFlashToSD();
     void migrateTruncatedDirs();
     void initReceiveCounter();
+    void buildSummaries();
 
     FlashStore* _flash = nullptr;
     SDStore* _sd = nullptr;
     std::vector<std::string> _conversations;
+    std::map<std::string, ConversationSummary> _summaries;
     uint32_t _nextReceiveCounter = 0;
 };

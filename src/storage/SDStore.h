@@ -27,6 +27,7 @@ public:
 
     bool formatForRatputer();
     bool wipeRatputer();
+    bool hasExistingData();
 
 private:
     void wipeDir(const char* path);

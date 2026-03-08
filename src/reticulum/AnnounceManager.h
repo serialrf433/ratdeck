@@ -50,6 +50,7 @@ public:
     void addManualContact(const std::string& hexHash, const std::string& name);
     void evictStale(unsigned long maxAgeMs = 3600000);
     void clearTransientNodes();
+    void clearAll();
 
 private:
     void saveContact(const DiscoveredNode& node);

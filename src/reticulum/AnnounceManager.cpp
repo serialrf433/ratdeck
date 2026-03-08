@@ -155,15 +155,19 @@ void AnnounceManager::received_announce(
     if ((int)_nodes.size() >= MAX_NODES) {
         evictStale();
         if ((int)_nodes.size() >= MAX_NODES) {
+            uint8_t maxHops = 0;
             unsigned long oldest = ULONG_MAX;
-            int oldestIdx = -1;
+            int evictIdx = -1;
             for (int i = 0; i < (int)_nodes.size(); i++) {
-                if (!_nodes[i].saved && _nodes[i].lastSeen < oldest) {
+                if (_nodes[i].saved) continue;
+                if (_nodes[i].hops > maxHops ||
+                    (_nodes[i].hops == maxHops && _nodes[i].lastSeen < oldest)) {
+                    maxHops = _nodes[i].hops;
                     oldest = _nodes[i].lastSeen;
-                    oldestIdx = i;
+                    evictIdx = i;
                 }
             }
-            if (oldestIdx >= 0) _nodes.erase(_nodes.begin() + oldestIdx);
+            if (evictIdx >= 0) _nodes.erase(_nodes.begin() + evictIdx);
         }
     }
     if ((int)_nodes.size() >= MAX_NODES) return;
@@ -249,6 +253,14 @@ void AnnounceManager::clearTransientNodes() {
     if (removed > 0) {
         Serial.printf("[ANNOUNCE] Cleared %d transient nodes\n", removed);
     }
+}
+
+void AnnounceManager::clearAll() {
+    _nodes.clear();
+    _nameCache.clear();
+    _contactsDirty = false;
+    _nameCacheDirty = false;
+    Serial.println("[ANNOUNCE] Cleared all nodes and name cache");
 }
 
 void AnnounceManager::saveContact(const DiscoveredNode& node) {

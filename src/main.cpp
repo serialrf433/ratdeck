@@ -31,6 +31,7 @@
 #include "ui/screens/LvHelpOverlay.h"
 // Map screen removed
 #include "ui/screens/LvNameInputScreen.h"
+#include "ui/screens/LvDataCleanScreen.h"
 #include "storage/FlashStore.h"
 #include "storage/SDStore.h"
 #include "storage/MessageStore.h"
@@ -100,6 +101,7 @@ LvSettingsScreen lvSettingsScreen;
 LvHelpOverlay lvHelpOverlay;
 // LvMapScreen removed
 LvNameInputScreen lvNameInputScreen;
+LvDataCleanScreen lvDataCleanScreen;
 
 // Tab-screen mapping (4 tabs) — LVGL versions
 LvScreen* lvTabScreens[LvTabBar::TAB_COUNT] = {};
@@ -749,6 +751,23 @@ void setup() {
         if (lvTabScreens[tab]) ui.setLvScreen(lvTabScreens[tab]);
     });
 
+    // Data clean screen (first boot only — when SD has old data)
+    lvDataCleanScreen.setDoneCallback([](bool wipe) {
+        if (wipe) {
+            Serial.println("[BOOT] User chose to wipe old data");
+            lvDataCleanScreen.showStatus("Clearing old data...");
+            sdStore.wipeRatputer();
+            if (announceManager) announceManager->clearAll();
+            Serial.println("[BOOT] Old data cleared");
+            lvDataCleanScreen.showStatus("Done! Rebooting...");
+            delay(1500);
+            ESP.restart();
+        } else {
+            Serial.println("[BOOT] User chose to keep old data");
+            ui.setLvScreen(&lvNameInputScreen);
+        }
+    });
+
     // Name input screen (first boot only — when no display name is set)
     lvNameInputScreen.setDoneCallback([](const String& name) {
         String finalName = name;
@@ -780,9 +799,14 @@ void setup() {
     });
 
     if (userConfig.settings().displayName.isEmpty()) {
-        // Show name input screen (boot mode keeps status/tab bars hidden)
-        ui.setLvScreen(&lvNameInputScreen);
-        Serial.println("[BOOT] Showing name input screen");
+        // First boot — check if SD has old data that should be cleaned
+        if (sdStore.isReady() && sdStore.hasExistingData()) {
+            ui.setLvScreen(&lvDataCleanScreen);
+            Serial.println("[BOOT] Old SD data found, showing data clean screen");
+        } else {
+            ui.setLvScreen(&lvNameInputScreen);
+            Serial.println("[BOOT] Showing name input screen");
+        }
     } else {
         // Name already set — go straight to home
         ui.setBootMode(false);

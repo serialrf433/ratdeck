@@ -114,11 +114,12 @@ void LvMessageView::onEnter() {
         // Register status callback for live updates
         std::string peer = _peerHex;
         _lxmf->setStatusCallback([this, peer](const std::string& peerHex, double, LXMFStatus) {
-            if (peerHex == peer) _lastRefreshMs = 0; // Force rebuild on next refreshUI
+            if (peerHex == peer) _statusDirty = true;
         });
     }
     _lastMsgCount = -1;
     _lastRefreshMs = 0;
+    _statusDirty = false;
     _inputText.clear();
 
     if (_lblHeader) {
@@ -129,6 +130,7 @@ void LvMessageView::onEnter() {
     if (_textarea) {
         lv_textarea_set_text(_textarea, "");
     }
+    _cachedMsgs.clear();  // Force fresh load
     rebuildMessages();
 }
 
@@ -141,28 +143,38 @@ void LvMessageView::onExit() {
 void LvMessageView::refreshUI() {
     if (!_lxmf) return;
     unsigned long now = millis();
-    if (now - _lastRefreshMs >= REFRESH_INTERVAL_MS) {
-        auto newMsgs = _lxmf->getMessages(_peerHex);
-        _lastRefreshMs = now;
-        // Rebuild if count changed or any status changed
-        bool changed = (newMsgs.size() != _cachedMsgs.size());
-        if (!changed) {
-            for (size_t i = 0; i < newMsgs.size(); i++) {
-                if (newMsgs[i].status != _cachedMsgs[i].status) { changed = true; break; }
-            }
+    if (now - _lastRefreshMs < REFRESH_INTERVAL_MS) return;
+    _lastRefreshMs = now;
+
+    // Quick check: if summary count unchanged and no status callback fired, skip disk load
+    auto* summary = _lxmf->getConversationSummary(_peerHex);
+    if (summary && !_statusDirty && summary->totalCount == (int)_cachedMsgs.size()) return;
+
+    _statusDirty = false;
+    auto newMsgs = _lxmf->getMessages(_peerHex);
+
+    // Rebuild if count changed or any status changed
+    bool changed = (newMsgs.size() != _cachedMsgs.size());
+    if (!changed) {
+        for (size_t i = 0; i < newMsgs.size(); i++) {
+            if (newMsgs[i].status != _cachedMsgs[i].status) { changed = true; break; }
         }
-        if (changed) {
-            _cachedMsgs = newMsgs;
-            _lastMsgCount = (int)_cachedMsgs.size();
-            rebuildMessages();
-        }
+    }
+    if (changed) {
+        _cachedMsgs = std::move(newMsgs);
+        _lastMsgCount = (int)_cachedMsgs.size();
+        rebuildMessages();
     }
 }
 
 void LvMessageView::rebuildMessages() {
     if (!_lxmf || !_msgScroll) return;
 
-    _cachedMsgs = _lxmf->getMessages(_peerHex);
+    // Only load from disk if _cachedMsgs is empty (first call or after send)
+    if (_cachedMsgs.empty()) {
+        _cachedMsgs = _lxmf->getMessages(_peerHex);
+    }
+    _lastMsgCount = (int)_cachedMsgs.size();
     _lastRefreshMs = millis();
     lv_obj_clean(_msgScroll);
 
@@ -269,6 +281,7 @@ void LvMessageView::sendCurrentMessage() {
 
     _inputText.clear();
     if (_textarea) lv_textarea_set_text(_textarea, "");
+    _cachedMsgs.clear();  // Force fresh load in rebuildMessages
     rebuildMessages();
 }
 
