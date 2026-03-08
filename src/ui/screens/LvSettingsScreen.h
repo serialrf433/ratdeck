@@ -16,8 +16,43 @@ class TCPClientInterface;
 class ReticulumManager;
 class IdentityManager;
 
-// Reuse existing SettingType, SettingItem, SettingsCategory from SettingsScreen.h
-#include "SettingsScreen.h"
+enum class SettingType : uint8_t {
+    READONLY,
+    INTEGER,
+    TOGGLE,
+    ENUM_CHOICE,
+    ACTION,
+    TEXT_INPUT
+};
+
+enum class SettingsView : uint8_t {
+    CATEGORY_LIST,
+    ITEM_LIST,
+    WIFI_PICKER
+};
+
+struct SettingItem {
+    const char* label;
+    SettingType type;
+    std::function<int()> getter;
+    std::function<void(int)> setter;
+    std::function<String(int)> formatter;
+    int minVal = 0;
+    int maxVal = 1;
+    int step = 1;
+    std::vector<const char*> enumLabels;
+    std::function<void()> action;
+    std::function<String()> textGetter;
+    std::function<void(const String&)> textSetter;
+    int maxTextLen = 16;
+};
+
+struct SettingsCategory {
+    const char* name;
+    int startIdx;
+    int count;
+    std::function<String()> summary;
+};
 
 class LvSettingsScreen : public LvScreen {
 public:

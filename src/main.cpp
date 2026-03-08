@@ -21,15 +21,6 @@
 #include "ui/UIManager.h"
 #include "ui/LvTabBar.h"
 #include "ui/LvInput.h"
-#include "ui/screens/BootScreen.h"
-#include "ui/screens/HomeScreen.h"
-#include "ui/screens/NodesScreen.h"
-#include "ui/screens/MessagesScreen.h"
-#include "ui/screens/MessageView.h"
-#include "ui/screens/SettingsScreen.h"
-#include "ui/screens/HelpOverlay.h"
-// MapScreen removed
-#include "ui/screens/NameInputScreen.h"
 #include "ui/screens/LvBootScreen.h"
 #include "ui/screens/LvHomeScreen.h"
 #include "ui/screens/LvNodesScreen.h"
@@ -98,17 +89,6 @@ Power powerMgr;
 AudioNotify audio;
 IdentityManager identityMgr;
 
-// --- Legacy Screens (kept for fallback during migration) ---
-BootScreen bootScreen;
-HomeScreen homeScreen;
-NodesScreen nodesScreen;
-MessagesScreen messagesScreen;
-MessageView messageView;
-SettingsScreen settingsScreen;
-HelpOverlay helpOverlay;
-// MapScreen removed
-NameInputScreen nameInputScreen;
-
 // --- LVGL Screens ---
 LvBootScreen lvBootScreen;
 LvHomeScreen lvHomeScreen;
@@ -123,9 +103,6 @@ LvNameInputScreen lvNameInputScreen;
 
 // Tab-screen mapping (4 tabs) — LVGL versions
 LvScreen* lvTabScreens[LvTabBar::TAB_COUNT] = {};
-
-// Legacy tab mapping (kept for reference)
-Screen* tabScreens[LvTabBar::TAB_COUNT] = {};
 
 // --- State ---
 bool radioOnline = false;
