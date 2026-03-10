@@ -134,17 +134,7 @@ GitHub Actions workflow (`.github/workflows/build.yml`):
 
 ### Release Process
 
-```bash
-# 1. Bump version in src/config/Config.h (all 4 defines)
-# 2. Commit and push
-git add -A && git commit -m "v1.5.2: description"
-git push origin main
-
-# 3. Tag and push tag
-git tag v1.5.2
-git push origin v1.5.2
-# CI creates GitHub release automatically
-```
+See [RELEASING.md](RELEASING.md) for the full release protocol (version bump, tagging, post-release verification, hotfix workflow).
 
 ## Dependencies
 
