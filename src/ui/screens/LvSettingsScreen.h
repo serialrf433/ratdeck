@@ -141,7 +141,6 @@ private:
         String wifiSTASSID;
         String wifiSTAPassword;
         bool bleEnabled;
-        bool transportEnabled;
     };
     RebootSnapshot _rebootSnap;
     void snapshotRebootSettings();

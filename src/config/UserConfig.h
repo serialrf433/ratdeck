@@ -47,9 +47,6 @@ struct UserSettings {
     // Touch
     uint8_t touchSensitivity = 3;     // 1-5
 
-    // Network
-    bool transportEnabled = false;  // Transport node (rebroadcasts packets)
-
     // BLE
     bool bleEnabled = true;
 

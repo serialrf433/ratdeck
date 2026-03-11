@@ -91,19 +91,12 @@ bool ReticulumManager::begin(SX1262* radio, FlashStore* flash) {
     }
 
     _reticulum = RNS::Reticulum();
-    RNS::Reticulum::transport_enabled(_transportEnabled);
+    RNS::Reticulum::transport_enabled(false);
     RNS::Reticulum::probe_destination_enabled(true);
-    if (_transportEnabled) {
-        // Transport node: larger tables for routing
-        RNS::Transport::path_table_maxsize(64);
-        RNS::Transport::announce_table_maxsize(64);
-    } else {
-        // Endpoint: smaller tables, no rebroadcasting
-        RNS::Transport::path_table_maxsize(32);
-        RNS::Transport::announce_table_maxsize(32);
-    }
+    RNS::Transport::path_table_maxsize(32);
+    RNS::Transport::announce_table_maxsize(32);
     _reticulum.start();
-    Serial.printf("[RNS] Reticulum started (%s)\n", _transportEnabled ? "Transport Node" : "Endpoint");
+    Serial.println("[RNS] Reticulum started (Endpoint)");
 
     // Layer 1: Transport-level announce rate limiter — filters BEFORE Ed25519 verify
     RNS::Transport::set_filter_packet_callback([](const RNS::Packet& packet) -> bool {
@@ -137,7 +130,7 @@ bool ReticulumManager::begin(SX1262* radio, FlashStore* flash) {
     _destination.accepts_links(true);
 
     _transportActive = true;
-    Serial.printf("[RNS] %s active\n", _transportEnabled ? "Transport node" : "Endpoint");
+    Serial.println("[RNS] Endpoint active");
     return true;
 }
 

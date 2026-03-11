@@ -458,20 +458,6 @@ void setup() {
     lvBootScreen.setProgress(0.65f, "Starting Reticulum...");
     // (LVGL boot renders via lv_timer_handler in setProgress)
     rns.setSDStore(&sdStore);
-    // Transport mode is loaded later from config; default is endpoint (no rebroadcast)
-    // We load a quick peek at the config to get the transport setting before RNS init
-    {
-        String json = sdStore.isReady() ? sdStore.readString(SD_PATH_USER_CONFIG) : "";
-        if (json.isEmpty()) json = flash.readString(PATH_USER_CONFIG);
-        if (!json.isEmpty()) {
-            JsonDocument peek;
-            if (!deserializeJson(peek, json)) {
-                bool transport = peek["transport"] | false;
-                rns.setTransportEnabled(transport);
-                Serial.printf("[BOOT] Transport mode: %s\n", transport ? "ON" : "OFF");
-            }
-        }
-    }
     if (rns.begin(&radio, &flash)) {
         Serial.printf("[BOOT] Identity: %s\n", rns.identityHash().c_str());
         lvBootScreen.setProgress(0.72f, "Reticulum active");

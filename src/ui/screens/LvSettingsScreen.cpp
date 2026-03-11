@@ -321,11 +321,6 @@ void LvSettingsScreen::buildItems() {
         },
         [](int v) { return String(v); }, 1, 65535, 1});
     idx++;
-    _items.push_back({"Transport Node", SettingType::TOGGLE,
-        [&s]() { return s.transportEnabled ? 1 : 0; },
-        [&s](int v) { s.transportEnabled = (v != 0); },
-        [](int v) { return v ? String("ON") : String("OFF"); }});
-    idx++;
     _items.push_back({"BLE", SettingType::TOGGLE,
         [&s]() { return s.bleEnabled ? 1 : 0; },
         [&s](int v) { s.bleEnabled = (v != 0); },
@@ -1074,7 +1069,6 @@ void LvSettingsScreen::snapshotRebootSettings() {
     _rebootSnap.wifiSTASSID = s.wifiSTASSID;
     _rebootSnap.wifiSTAPassword = s.wifiSTAPassword;
     _rebootSnap.bleEnabled = s.bleEnabled;
-    _rebootSnap.transportEnabled = s.transportEnabled;
 }
 
 bool LvSettingsScreen::rebootSettingsChanged() const {
@@ -1083,8 +1077,7 @@ bool LvSettingsScreen::rebootSettingsChanged() const {
     return s.wifiMode != _rebootSnap.wifiMode
         || s.wifiSTASSID != _rebootSnap.wifiSTASSID
         || s.wifiSTAPassword != _rebootSnap.wifiSTAPassword
-        || s.bleEnabled != _rebootSnap.bleEnabled
-        || s.transportEnabled != _rebootSnap.transportEnabled;
+        || s.bleEnabled != _rebootSnap.bleEnabled;
 }
 
 void LvSettingsScreen::snapshotTCPSettings() {
