@@ -703,7 +703,10 @@ float SX1262::getAirtime(uint16_t written) {
 void IRAM_ATTR SX1262::onDio0Rise() {
     if (_instance) {
         _instance->packetAvailable = true;
-        _instance->handleDio0Rise();
+        // Don't call handleDio0Rise() from ISR — it does SPI which deadlocks
+        // on the shared bus when the display holds the SPI mutex (causes
+        // "Interrupt wdt timeout on CPU1" crash). LoRaInterface::loop() polls
+        // packetAvailable and reads the radio buffer from main loop context.
     }
 }
 
