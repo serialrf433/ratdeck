@@ -31,6 +31,7 @@ public:
 private:
     void sendCurrentMessage();
     void rebuildMessages();
+    void appendMessage(const LXMFMessage& msg);
     std::string getPeerName();
 
     LXMFManager* _lxmf = nullptr;

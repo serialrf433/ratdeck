@@ -158,12 +158,122 @@ void LvMessageView::refreshUI() {
 
     auto newMsgs = _lxmf->getMessages(_peerHex);
     if (newMsgs.size() != _cachedMsgs.size()) {
-        _cachedMsgs = std::move(newMsgs);
-        _lastMsgCount = (int)_cachedMsgs.size();
-        rebuildMessages();
+        if (newMsgs.size() > _cachedMsgs.size()) {
+            // Incremental append — only create widgets for new messages
+            size_t oldCount = _cachedMsgs.size();
+            _cachedMsgs = std::move(newMsgs);
+            _lastMsgCount = (int)_cachedMsgs.size();
+            _lastRefreshMs = millis();
+            for (size_t i = oldCount; i < _cachedMsgs.size(); i++) {
+                appendMessage(_cachedMsgs[i]);
+            }
+            lv_obj_scroll_to_y(_msgScroll, LV_COORD_MAX, LV_ANIM_OFF);
+        } else {
+            // Count decreased (deletion?) — full rebuild
+            _cachedMsgs = std::move(newMsgs);
+            _lastMsgCount = (int)_cachedMsgs.size();
+            rebuildMessages();
+        }
         // Mark as read since user is actively viewing this conversation
         _lxmf->markRead(_peerHex);
         if (_ui) _ui->lvTabBar().setUnreadCount(LvTabBar::TAB_MSGS, _lxmf->unreadCount());
+    }
+}
+
+void LvMessageView::appendMessage(const LXMFMessage& msg) {
+    if (!_msgScroll) return;
+
+    const lv_font_t* font = &lv_font_montserrat_12;
+    int maxBubbleW = Theme::CONTENT_W * 3 / 4;
+
+    // Bubble container
+    lv_obj_t* bubble = lv_obj_create(_msgScroll);
+    lv_obj_set_width(bubble, Theme::CONTENT_W - 12);
+    lv_obj_set_style_pad_all(bubble, 0, 0);
+    lv_obj_set_style_bg_opa(bubble, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_width(bubble, 0, 0);
+    lv_obj_clear_flag(bubble, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_set_height(bubble, LV_SIZE_CONTENT);
+
+    // Message text in a rounded box
+    lv_obj_t* box = lv_obj_create(bubble);
+    lv_obj_set_style_radius(box, 4, 0);
+    lv_obj_set_style_pad_all(box, 5, 0);
+    lv_obj_set_style_border_width(box, 0, 0);
+    lv_obj_set_width(box, LV_SIZE_CONTENT);
+    lv_obj_set_height(box, LV_SIZE_CONTENT);
+    lv_obj_clear_flag(box, LV_OBJ_FLAG_SCROLLABLE);
+
+    if (msg.incoming) {
+        lv_obj_set_style_bg_color(box, lv_color_hex(Theme::MSG_IN_BG), 0);
+        lv_obj_align(box, LV_ALIGN_LEFT_MID, 0, 0);
+    } else {
+        lv_obj_set_style_bg_color(box, lv_color_hex(Theme::MSG_OUT_BG), 0);
+        lv_obj_align(box, LV_ALIGN_RIGHT_MID, 0, 0);
+    }
+    lv_obj_set_style_bg_opa(box, LV_OPA_COVER, 0);
+
+    // Message label with word wrap — status-based colors for outgoing
+    uint32_t textColor = Theme::ACCENT; // incoming default
+    if (!msg.incoming) {
+        switch (msg.status) {
+            case LXMFStatus::QUEUED:
+            case LXMFStatus::SENDING:
+                textColor = Theme::WARNING_CLR; break;
+            case LXMFStatus::SENT:
+            case LXMFStatus::DELIVERED:
+                textColor = Theme::PRIMARY; break;
+            case LXMFStatus::FAILED:
+                textColor = Theme::ERROR_CLR; break;
+            default:
+                textColor = Theme::PRIMARY; break;
+        }
+    }
+    lv_obj_t* lbl = lv_label_create(box);
+    lv_obj_set_style_text_font(lbl, font, 0);
+    lv_obj_set_style_text_color(lbl, lv_color_hex(textColor), 0);
+    lv_label_set_long_mode(lbl, LV_LABEL_LONG_WRAP);
+    lv_obj_set_width(lbl, maxBubbleW - 14);
+    lv_label_set_text(lbl, msg.content.c_str());
+
+    // Status indicator for outgoing (tracked for partial updates)
+    if (!msg.incoming) {
+        const char* ind = "~";
+        uint32_t indColor = Theme::MUTED;
+        if (msg.status == LXMFStatus::SENT || msg.status == LXMFStatus::DELIVERED) {
+            ind = "*"; indColor = Theme::ACCENT;
+        } else if (msg.status == LXMFStatus::FAILED) {
+            ind = "!"; indColor = Theme::ERROR_CLR;
+        }
+        lv_obj_t* statusLbl = lv_label_create(box);
+        lv_obj_set_style_text_font(statusLbl, &lv_font_montserrat_10, 0);
+        lv_obj_set_style_text_color(statusLbl, lv_color_hex(indColor), 0);
+        lv_label_set_text(statusLbl, ind);
+        lv_obj_align(statusLbl, LV_ALIGN_BOTTOM_RIGHT, 0, 0);
+        _statusLabels.push_back(statusLbl);
+        _textLabels.push_back(lbl);
+    } else {
+        _statusLabels.push_back(nullptr);
+        _textLabels.push_back(nullptr);
+    }
+
+    // Timestamp below bubble
+    if (msg.timestamp > 1700000000) {
+        time_t t = (time_t)msg.timestamp;
+        struct tm* tm = localtime(&t);
+        if (tm) {
+            char timeBuf[8];
+            snprintf(timeBuf, sizeof(timeBuf), "%02d:%02d", tm->tm_hour, tm->tm_min);
+            lv_obj_t* timeLbl = lv_label_create(bubble);
+            lv_obj_set_style_text_font(timeLbl, &lv_font_montserrat_10, 0);
+            lv_obj_set_style_text_color(timeLbl, lv_color_hex(Theme::MUTED), 0);
+            lv_label_set_text(timeLbl, timeBuf);
+            if (msg.incoming) {
+                lv_obj_align_to(timeLbl, box, LV_ALIGN_OUT_BOTTOM_LEFT, 2, 1);
+            } else {
+                lv_obj_align_to(timeLbl, box, LV_ALIGN_OUT_BOTTOM_RIGHT, -2, 1);
+            }
+        }
     }
 }
 
@@ -180,99 +290,8 @@ void LvMessageView::rebuildMessages() {
     _statusLabels.clear();
     _textLabels.clear();
 
-    const lv_font_t* font = &lv_font_montserrat_12;
-    int maxBubbleW = Theme::CONTENT_W * 3 / 4;
-
     for (const auto& msg : _cachedMsgs) {
-        // Bubble container
-        lv_obj_t* bubble = lv_obj_create(_msgScroll);
-        lv_obj_set_width(bubble, Theme::CONTENT_W - 12);
-        lv_obj_set_style_pad_all(bubble, 0, 0);
-        lv_obj_set_style_bg_opa(bubble, LV_OPA_TRANSP, 0);
-        lv_obj_set_style_border_width(bubble, 0, 0);
-        lv_obj_clear_flag(bubble, LV_OBJ_FLAG_SCROLLABLE);
-        lv_obj_set_height(bubble, LV_SIZE_CONTENT);
-
-        // Message text in a rounded box
-        lv_obj_t* box = lv_obj_create(bubble);
-        lv_obj_set_style_radius(box, 4, 0);
-        lv_obj_set_style_pad_all(box, 5, 0);
-        lv_obj_set_style_border_width(box, 0, 0);
-        lv_obj_set_width(box, LV_SIZE_CONTENT);
-        lv_obj_set_height(box, LV_SIZE_CONTENT);
-        lv_obj_clear_flag(box, LV_OBJ_FLAG_SCROLLABLE);
-
-        if (msg.incoming) {
-            lv_obj_set_style_bg_color(box, lv_color_hex(Theme::MSG_IN_BG), 0);
-            lv_obj_align(box, LV_ALIGN_LEFT_MID, 0, 0);
-        } else {
-            lv_obj_set_style_bg_color(box, lv_color_hex(Theme::MSG_OUT_BG), 0);
-            lv_obj_align(box, LV_ALIGN_RIGHT_MID, 0, 0);
-        }
-        lv_obj_set_style_bg_opa(box, LV_OPA_COVER, 0);
-
-        // Message label with word wrap — status-based colors for outgoing
-        uint32_t textColor = Theme::ACCENT; // incoming default
-        if (!msg.incoming) {
-            switch (msg.status) {
-                case LXMFStatus::QUEUED:
-                case LXMFStatus::SENDING:
-                    textColor = Theme::WARNING_CLR; break;
-                case LXMFStatus::SENT:
-                case LXMFStatus::DELIVERED:
-                    textColor = Theme::PRIMARY; break;
-                case LXMFStatus::FAILED:
-                    textColor = Theme::ERROR_CLR; break;
-                default:
-                    textColor = Theme::PRIMARY; break;
-            }
-        }
-        lv_obj_t* lbl = lv_label_create(box);
-        lv_obj_set_style_text_font(lbl, font, 0);
-        lv_obj_set_style_text_color(lbl, lv_color_hex(textColor), 0);
-        lv_label_set_long_mode(lbl, LV_LABEL_LONG_WRAP);
-        lv_obj_set_width(lbl, maxBubbleW - 14);
-        lv_label_set_text(lbl, msg.content.c_str());
-
-        // Status indicator for outgoing (tracked for partial updates)
-        if (!msg.incoming) {
-            const char* ind = "~";
-            uint32_t indColor = Theme::MUTED;
-            if (msg.status == LXMFStatus::SENT || msg.status == LXMFStatus::DELIVERED) {
-                ind = "*"; indColor = Theme::ACCENT;
-            } else if (msg.status == LXMFStatus::FAILED) {
-                ind = "!"; indColor = Theme::ERROR_CLR;
-            }
-            lv_obj_t* statusLbl = lv_label_create(box);
-            lv_obj_set_style_text_font(statusLbl, &lv_font_montserrat_10, 0);
-            lv_obj_set_style_text_color(statusLbl, lv_color_hex(indColor), 0);
-            lv_label_set_text(statusLbl, ind);
-            lv_obj_align(statusLbl, LV_ALIGN_BOTTOM_RIGHT, 0, 0);
-            _statusLabels.push_back(statusLbl);
-            _textLabels.push_back(lbl);
-        } else {
-            _statusLabels.push_back(nullptr);
-            _textLabels.push_back(nullptr);
-        }
-
-        // Timestamp below bubble
-        if (msg.timestamp > 1700000000) {
-            time_t t = (time_t)msg.timestamp;
-            struct tm* tm = localtime(&t);
-            if (tm) {
-                char timeBuf[8];
-                snprintf(timeBuf, sizeof(timeBuf), "%02d:%02d", tm->tm_hour, tm->tm_min);
-                lv_obj_t* timeLbl = lv_label_create(bubble);
-                lv_obj_set_style_text_font(timeLbl, &lv_font_montserrat_10, 0);
-                lv_obj_set_style_text_color(timeLbl, lv_color_hex(Theme::MUTED), 0);
-                lv_label_set_text(timeLbl, timeBuf);
-                if (msg.incoming) {
-                    lv_obj_align_to(timeLbl, box, LV_ALIGN_OUT_BOTTOM_LEFT, 2, 1);
-                } else {
-                    lv_obj_align_to(timeLbl, box, LV_ALIGN_OUT_BOTTOM_RIGHT, -2, 1);
-                }
-            }
-        }
+        appendMessage(msg);
     }
 
     // Auto-scroll to bottom

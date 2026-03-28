@@ -9,10 +9,13 @@ WiFiInterface::WiFiInterface(const char* name)
     _bitrate = 1000000;  // WiFi is fast
     _HW_MTU = 500;
     _apPassword = WIFI_AP_PASSWORD;
+    _txBuffer = (uint8_t*)ps_malloc(TX_BUFFER_SIZE);
+    if (!_txBuffer) _txBuffer = (uint8_t*)malloc(TX_BUFFER_SIZE);
 }
 
 WiFiInterface::~WiFiInterface() {
     stop();
+    if (_txBuffer) { free(_txBuffer); _txBuffer = nullptr; }
 }
 
 void WiFiInterface::setAPCredentials(const char* ssid, const char* password) {
@@ -237,17 +240,21 @@ std::vector<WiFiInterface::ScanResult> WiFiInterface::getScanResults(int maxResu
 }
 
 // HDLC-like framing: [0x7E] [escaped data] [0x7E]
+// Buffered: builds full frame then sends in a single write() call
 void WiFiInterface::sendFrame(WiFiClient& client, const uint8_t* data, size_t len) {
-    client.write(FRAME_START);
-    for (size_t i = 0; i < len; i++) {
+    if (!_txBuffer) return;
+    size_t pos = 0;
+    _txBuffer[pos++] = FRAME_START;
+    for (size_t i = 0; i < len && pos < TX_BUFFER_SIZE - 2; i++) {
         if (data[i] == FRAME_START || data[i] == FRAME_ESC) {
-            client.write(FRAME_ESC);
-            client.write(data[i] ^ FRAME_XOR);
+            _txBuffer[pos++] = FRAME_ESC;
+            if (pos < TX_BUFFER_SIZE - 1) _txBuffer[pos++] = data[i] ^ FRAME_XOR;
         } else {
-            client.write(data[i]);
+            _txBuffer[pos++] = data[i];
         }
     }
-    client.write(FRAME_START);
+    _txBuffer[pos++] = FRAME_START;
+    client.write(_txBuffer, pos);
     client.flush();
 }
 
