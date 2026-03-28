@@ -170,21 +170,14 @@ private:
     // $xxRMC — Recommended Minimum
     // fields: type,time,status,lat,N/S,lon,E/W,speed,course,date,magvar,E/W,mode
     bool parseRMC(char* fields[], int n) {
-        // Status: A=active/valid, V=void
-        if (fields[2][0] != 'A') {
-            _data.timeValid = false;
-            _data.locationValid = false;
-            return true;  // Parsed successfully, just no fix
-        }
-
-        // Time: HHMMSS.ss
+        // Always parse time — module's battery-backed RTC provides time
+        // even without satellite fix (status='V'). Year/epoch validation
+        // in GPSManager::syncSystemTime() guards against garbage data.
         if (strlen(fields[1]) >= 6) {
             _data.hour   = (fields[1][0] - '0') * 10 + (fields[1][1] - '0');
             _data.minute = (fields[1][2] - '0') * 10 + (fields[1][3] - '0');
             _data.second = (fields[1][4] - '0') * 10 + (fields[1][5] - '0');
         }
-
-        // Date: DDMMYY
         if (n >= 10 && strlen(fields[9]) >= 6) {
             _data.day   = (fields[9][0] - '0') * 10 + (fields[9][1] - '0');
             _data.month = (fields[9][2] - '0') * 10 + (fields[9][3] - '0');
@@ -192,6 +185,12 @@ private:
             _data.year  = 2000 + yy;
             _data.timeValid = true;
             _data.timeUpdated = true;
+        }
+
+        // Location requires active fix (status='A')
+        if (fields[2][0] != 'A') {
+            _data.locationValid = false;
+            return true;
         }
 
         // Position — only parse if location tracking is enabled

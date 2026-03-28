@@ -65,11 +65,14 @@ void GPSManager::loop() {
     NMEAData& d = _parser.data();
     if (d.timeUpdated) {
         d.timeUpdated = false;
-        // Only trust GPS time when we have actual satellite lock (sats > 0).
-        // With sats=0 the module returns cached RTC time which drifts.
+        // Prefer satellite-verified time (sats > 0), but allow the module's
+        // battery-backed RTC for the first sync so the clock appears on boot
+        // even without satellite lock (e.g., indoors). Year/epoch validation
+        // in syncSystemTime() guards against garbage data.
         bool hasSatFix = (d.satellites > 0);
         if (hasSatFix) _lastFixMs = millis();
-        if (d.timeValid && hasSatFix && (millis() - _lastTimeSyncMs >= TIME_SYNC_INTERVAL_MS || _timeSyncCount == 0)) {
+        bool allowSync = hasSatFix || (_timeSyncCount == 0);
+        if (d.timeValid && allowSync && (millis() - _lastTimeSyncMs >= TIME_SYNC_INTERVAL_MS || _timeSyncCount == 0)) {
             syncSystemTime();
             // Persist time to NVS so reboots without WiFi/GPS have approximate time
             persistToNVS();
@@ -154,9 +157,9 @@ void GPSManager::syncSystemTime() {
     setenv("TZ", _posixTZ, 1);
     tzset();
 
-    Serial.printf("[GPS] System time synced: %04d-%02d-%02d %02d:%02d:%02d UTC (sync #%lu)\n",
+    Serial.printf("[GPS] System time synced: %04d-%02d-%02d %02d:%02d:%02d UTC (sync #%lu, sats=%d)\n",
                   d.year, d.month, d.day, d.hour, d.minute, d.second,
-                  (unsigned long)_timeSyncCount);
+                  (unsigned long)_timeSyncCount, (int)d.satellites);
 }
 
 void GPSManager::restoreTimeFromNVS() {
