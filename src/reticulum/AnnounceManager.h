@@ -10,6 +10,7 @@
 
 class SDStore;
 class FlashStore;
+class LoRaInterface;
 
 struct DiscoveredNode {
     RNS::Bytes hash;
@@ -33,6 +34,7 @@ public:
         const RNS::Bytes& app_data) override;
 
     void setStorage(SDStore* sd, FlashStore* flash);
+    void setLoRaInterface(LoRaInterface* li) { _loraIf = li; }
     void setLocalDestHash(const RNS::Bytes& hash) { _localDestHash = hash; }
     void saveContacts();
     void loadContacts();
@@ -61,6 +63,7 @@ private:
     std::vector<DiscoveredNode> _nodes;
     SDStore* _sd = nullptr;
     FlashStore* _flash = nullptr;
+    LoRaInterface* _loraIf = nullptr;
     RNS::Bytes _localDestHash;
     bool _contactsDirty = false;
     bool _nameCacheDirty = false;

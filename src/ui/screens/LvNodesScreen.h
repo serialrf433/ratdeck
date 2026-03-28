@@ -6,6 +6,7 @@
 #include <vector>
 
 class AnnounceManager;
+class UserConfig;
 
 class LvNodesScreen : public LvScreen {
 public:
@@ -19,6 +20,7 @@ public:
     void setAnnounceManager(AnnounceManager* am) { _am = am; }
     void setNodeSelectedCallback(NodeSelectedCallback cb) { _onSelect = cb; }
     void setUIManager(class UIManager* ui) { _ui = ui; }
+    void setUserConfig(UserConfig* cfg) { _cfg = cfg; }
     bool handleLongPress() override;
 
     const char* title() const override { return "Nodes"; }
@@ -31,6 +33,7 @@ private:
 
     AnnounceManager* _am = nullptr;
     class UIManager* _ui = nullptr;
+    UserConfig* _cfg = nullptr;
     NodeSelectedCallback _onSelect;
     bool _confirmDelete = false;
     int _lastNodeCount = -1;

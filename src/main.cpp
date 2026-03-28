@@ -519,6 +519,7 @@ void setup() {
     announceManager = new AnnounceManager();
     announceManager->setStorage(&sdStore, &flash);
     announceManager->setLocalDestHash(rns.destination().hash());
+    if (rns.loraInterface()) announceManager->setLoRaInterface(rns.loraInterface());
     announceManager->loadContacts();
     announceManager->loadNameCache();
     announceHandler = RNS::HAnnounceHandler(announceManager);
@@ -718,6 +719,7 @@ void setup() {
 
     lvNodesScreen.setAnnounceManager(announceManager);
     lvNodesScreen.setUIManager(&ui);
+    lvNodesScreen.setUserConfig(&userConfig);
     lvNodesScreen.setNodeSelectedCallback([](const std::string& peerHex) {
         lvMessageView.setPeerHex(peerHex);
         ui.lvTabBar().setActiveTab(LvTabBar::TAB_MSGS);

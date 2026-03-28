@@ -3,6 +3,7 @@
 #include "config/Config.h"
 #include "storage/SDStore.h"
 #include "storage/FlashStore.h"
+#include "transport/LoRaInterface.h"
 #include <ArduinoJson.h>
 #include <LittleFS.h>
 
@@ -154,6 +155,7 @@ void AnnounceManager::received_announce(
         if (!idHex.empty()) node.identityHex = idHex;
         node.lastSeen = now;
         node.hops = RNS::Transport::hops_to(destination_hash);
+        if (_loraIf) { node.rssi = _loraIf->lastRxRssi(); node.snr = _loraIf->lastRxSnr(); }
         if (node.saved) _contactsDirty = true;
         // Only compute toHex for log + name cache when node actually updated
         std::string destHex = destination_hash.toHex();
@@ -228,6 +230,7 @@ void AnnounceManager::received_announce(
     node.identityHex = idHex;
     node.lastSeen = millis();
     node.hops = RNS::Transport::hops_to(destination_hash);
+    if (_loraIf) { node.rssi = _loraIf->lastRxRssi(); node.snr = _loraIf->lastRxSnr(); }
     _hashIndex[key] = (int)_nodes.size();
     _nodes.push_back(node);
 }

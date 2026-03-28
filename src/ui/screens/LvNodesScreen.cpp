@@ -3,6 +3,7 @@
 #include "ui/LvTheme.h"
 #include "ui/UIManager.h"
 #include "reticulum/AnnounceManager.h"
+#include "config/UserConfig.h"
 #include <Arduino.h>
 #include <algorithm>
 
@@ -227,26 +228,32 @@ void LvNodesScreen::syncVisibleRows() {
             lv_obj_set_style_border_width(_poolRows[i], 0, 0);
             lv_obj_set_style_border_side(_poolRows[i], LV_BORDER_SIDE_NONE, 0);
 
-            // Name + hash
-            std::string truncName = node.name.substr(0, 15);
+            // Name + hash (use smaller font to reduce truncation)
+            bool devMode = _cfg && _cfg->settings().devMode;
+            std::string truncName = node.name.substr(0, devMode ? 12 : 15);
             std::string displayHash = node.hash.toHex().substr(0, 12);
             char buf[64];
             snprintf(buf, sizeof(buf), "%s [%s]", truncName.c_str(), displayHash.c_str());
-            lv_obj_set_style_text_font(_poolNameLabels[i], &lv_font_montserrat_14, 0);
+            lv_obj_set_style_text_font(_poolNameLabels[i], &lv_font_montserrat_12, 0);
             lv_obj_set_style_text_color(_poolNameLabels[i], lv_color_hex(
                 node.saved ? Theme::ACCENT : Theme::PRIMARY), 0);
             lv_label_set_text(_poolNameLabels[i], buf);
             lv_obj_align(_poolNameLabels[i], LV_ALIGN_LEFT_MID, 8, 0);
 
-            // Hops + age
+            // Hops + age + optional RSSI (dev mode)
             unsigned long ageSec = (millis() - node.lastSeen) / 1000;
-            char infoBuf[24];
+            char infoBuf[32];
             if (node.hops < 128) {
                 if (ageSec < 60) snprintf(infoBuf, sizeof(infoBuf), "%dhop %lus", node.hops, ageSec);
                 else snprintf(infoBuf, sizeof(infoBuf), "%dhop %lum", node.hops, ageSec / 60);
             } else {
                 if (ageSec < 60) snprintf(infoBuf, sizeof(infoBuf), "%lus", ageSec);
                 else snprintf(infoBuf, sizeof(infoBuf), "%lum", ageSec / 60);
+            }
+            if (devMode && node.rssi != 0) {
+                char rssiBuf[16];
+                snprintf(rssiBuf, sizeof(rssiBuf), " %ddB", node.rssi);
+                strncat(infoBuf, rssiBuf, sizeof(infoBuf) - strlen(infoBuf) - 1);
             }
             lv_label_set_text(_poolInfoLabels[i], infoBuf);
             lv_obj_align(_poolInfoLabels[i], LV_ALIGN_RIGHT_MID, -4, 0);
