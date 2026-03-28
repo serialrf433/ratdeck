@@ -810,7 +810,10 @@ void LvSettingsScreen::rebuildItemList() {
         String valStr;
         uint32_t valColor = Theme::PRIMARY;
 
-        if (_editing && selected) {
+        if (_freqEditing && selected) {
+            valStr = String("< ") + freqFormatWithCursor() + " >";
+            valColor = Theme::WARNING_CLR;
+        } else if (_editing && selected) {
             if (item.type == SettingType::ENUM_CHOICE && !item.enumLabels.empty()) {
                 int vi = constrain(_editValue, 0, (int)item.enumLabels.size() - 1);
                 valStr = String("< ") + item.enumLabels[vi] + " >";
@@ -1055,6 +1058,41 @@ bool LvSettingsScreen::handleKey(const KeyEvent& event) {
                 return true;
             }
 
+            // Frequency digit-cursor edit mode
+            if (_freqEditing) {
+                if (event.left) {
+                    if (_freqCursor > 0) _freqCursor--;
+                    rebuildItemList(); return true;
+                }
+                if (event.right) {
+                    if (_freqCursor < 8) _freqCursor++;
+                    rebuildItemList(); return true;
+                }
+                if (event.character >= '0' && event.character <= '9') {
+                    _freqDigits[_freqCursor] = event.character - '0';
+                    _editValue = freqRecompose();
+                    if (_freqCursor < 8) _freqCursor++;
+                    rebuildItemList(); return true;
+                }
+                if (event.enter || event.character == '\n' || event.character == '\r') {
+                    auto& item = _items[_selectedIdx];
+                    _editValue = freqRecompose();
+                    if (item.setter) item.setter(_editValue);
+                    _freqEditing = false; _editing = false;
+                    applyAndSave(); rebuildItemList(); return true;
+                }
+                if (event.del || event.character == 8) {
+                    if (_freqCursor > 0) _freqCursor--;
+                    rebuildItemList(); return true;
+                }
+                if (event.character == 0x1B) {
+                    _editValue = _freqOriginal;
+                    _freqEditing = false; _editing = false;
+                    rebuildItemList(); return true;
+                }
+                return true;  // Consume all keys in freq mode
+            }
+
             // Value edit mode
             if (_editing) {
                 auto& item = _items[_selectedIdx];
@@ -1148,6 +1186,15 @@ bool LvSettingsScreen::handleKey(const KeyEvent& event) {
                     if (item.setter) item.setter(val ? 0 : 1);
                     applyAndSave();
                     rebuildItemList();
+                } else if (strcmp(item.label, "Frequency") == 0 && item.type == SettingType::INTEGER) {
+                    // Radio-style digit cursor editor for frequency
+                    _editing = true;
+                    _editValue = item.getter ? item.getter() : 0;
+                    _freqOriginal = _editValue;
+                    freqDecompose(_editValue);
+                    _freqCursor = 0;
+                    _freqEditing = true;
+                    rebuildItemList();
                 } else {
                     _editing = true;
                     _numericTyping = false;
@@ -1228,6 +1275,44 @@ bool LvSettingsScreen::tcpSettingsChanged() const {
     String curHost = s.tcpConnections.empty() ? "" : s.tcpConnections[0].host;
     uint16_t curPort = s.tcpConnections.empty() ? 0 : s.tcpConnections[0].port;
     return curHost != _tcpSnapHost || curPort != _tcpSnapPort;
+}
+
+// --- Frequency digit-cursor editor helpers ---
+
+void LvSettingsScreen::freqDecompose(int value) {
+    // Decompose Hz value into 9 individual digits (left-padded with zeros)
+    for (int i = 8; i >= 0; i--) {
+        _freqDigits[i] = value % 10;
+        value /= 10;
+    }
+}
+
+int LvSettingsScreen::freqRecompose() const {
+    int val = 0;
+    for (int i = 0; i < 9; i++) val = val * 10 + _freqDigits[i];
+    return val;
+}
+
+String LvSettingsScreen::freqFormatWithCursor() const {
+    // Format as "NNN.NNN.NNN" with brackets around cursor digit
+    char buf[24];
+    char digits[9];
+    for (int i = 0; i < 9; i++) digits[i] = '0' + _freqDigits[i];
+
+    // Build string with cursor brackets: e.g., "920.[6]50.500"
+    int pos = 0;
+    for (int i = 0; i < 9; i++) {
+        if (i == 3 || i == 6) buf[pos++] = '.';
+        if (i == _freqCursor) {
+            buf[pos++] = '[';
+            buf[pos++] = digits[i];
+            buf[pos++] = ']';
+        } else {
+            buf[pos++] = digits[i];
+        }
+    }
+    buf[pos] = '\0';
+    return String(buf);
 }
 
 void LvSettingsScreen::applyAndSave() {

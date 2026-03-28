@@ -135,6 +135,15 @@ private:
     bool _confirmingReset = false;
     bool _confirmingDevMode = false;
 
+    // Frequency digit-cursor editor (radio-style)
+    bool _freqEditing = false;
+    int _freqCursor = 0;         // 0-8, active digit position
+    int _freqDigits[9] = {};     // Individual digits of Hz frequency
+    int _freqOriginal = 0;       // Original value for Esc cancel
+    void freqDecompose(int value);
+    int freqRecompose() const;
+    String freqFormatWithCursor() const;
+
     // WiFi picker
     std::vector<WiFiInterface::ScanResult> _wifiResults;
     int _wifiPickerIdx = 0;
