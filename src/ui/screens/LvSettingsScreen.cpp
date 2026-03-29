@@ -33,6 +33,9 @@ static constexpr int LV_NUM_PRESETS = 3;
 int LvSettingsScreen::detectPreset() const {
     if (!_cfg) return -1;
     auto& s = _cfg->settings();
+    // Check if frequency matches the current region's default
+    uint32_t regionFreq = REGION_FREQ[constrain(s.radioRegion, 0, REGION_COUNT - 1)];
+    if (s.loraFrequency != regionFreq) return -1;  // Custom frequency → no preset match
     for (int i = 0; i < LV_NUM_PRESETS; i++) {
         if (s.loraSF == LV_PRESETS[i].sf && s.loraBW == LV_PRESETS[i].bw
             && s.loraCR == LV_PRESETS[i].cr && s.loraTxPower == LV_PRESETS[i].txPower)
@@ -250,7 +253,7 @@ void LvSettingsScreen::buildItems() {
         presetItem.type = SettingType::ENUM_CHOICE;
         presetItem.getter = [this]() { int p = detectPreset(); return (p >= 0) ? p : LV_NUM_PRESETS; };
         presetItem.setter = [this](int v) { if (v >= 0 && v < LV_NUM_PRESETS) applyPreset(v); };
-        presetItem.minVal = 0; presetItem.maxVal = LV_NUM_PRESETS; presetItem.step = 1;
+        presetItem.minVal = 0; presetItem.maxVal = LV_NUM_PRESETS - 1; presetItem.step = 1;
         presetItem.enumLabels = {"Balanced", "Long Range", "Fast", "Custom"};
         _items.push_back(presetItem);
         idx++;
