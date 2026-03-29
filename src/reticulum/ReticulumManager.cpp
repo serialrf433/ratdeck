@@ -4,6 +4,7 @@
 #include <LittleFS.h>
 #include <Preferences.h>
 #include <map>
+#include <unordered_map>
 #include <string>
 
 bool LittleFSFileSystem::init() { return true; }
@@ -116,19 +117,17 @@ bool ReticulumManager::begin(SX1262* radio, FlashStore* flash) {
         if (++count > maxRate) return false;
 
         // Skip re-validation of known paths (saves ~100ms Ed25519 per announce)
-        // Allow through if hop count improved, or once per 5 min for name/ratchet updates
+        // Allow through once per 5 min for name/ratchet updates.
+        // Uses raw hash bytes as key (avoids expensive toHex + hops_to per packet).
         if (RNS::Transport::has_path(packet.destination_hash())) {
-            static std::map<std::string, unsigned long> lastRevalidate;
-            std::string destHex = packet.destination_hash().toHex();
+            static std::unordered_map<std::string, unsigned long> lastRevalidate;
+            std::string key((const char*)packet.destination_hash().data(),
+                            packet.destination_hash().size());
 
-            uint8_t existingHops = RNS::Transport::hops_to(packet.destination_hash());
-            if (packet.hops() < existingHops) return true;  // Better path, allow
-
-            auto it = lastRevalidate.find(destHex);
+            auto it = lastRevalidate.find(key);
             if (it != lastRevalidate.end() && (now - it->second) < 300000) return false;
-            lastRevalidate[destHex] = now;
+            lastRevalidate[key] = now;
 
-            // Cap map size to prevent unbounded growth
             if (lastRevalidate.size() > 300) lastRevalidate.clear();
         }
 

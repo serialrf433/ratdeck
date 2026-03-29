@@ -297,7 +297,7 @@ void LvNodesScreen::syncVisibleRows() {
             // Hops + age + optional RSSI (dev mode)
             unsigned long ageSec = (millis() - node.lastSeen) / 1000;
             char infoBuf[32];
-            if (node.hops < 128) {
+            if (node.hops > 0 && node.hops < 128) {
                 if (ageSec < 60) snprintf(infoBuf, sizeof(infoBuf), "%dhop %lus", node.hops, ageSec);
                 else snprintf(infoBuf, sizeof(infoBuf), "%dhop %lum", node.hops, ageSec / 60);
             } else {
