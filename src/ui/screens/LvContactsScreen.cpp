@@ -3,6 +3,7 @@
 #include "ui/UIManager.h"
 #include "reticulum/AnnounceManager.h"
 #include <Arduino.h>
+#include "fonts/fonts.h"
 
 void LvContactsScreen::createUI(lv_obj_t* parent) {
     _screen = parent;
@@ -10,7 +11,7 @@ void LvContactsScreen::createUI(lv_obj_t* parent) {
     lv_obj_set_style_pad_all(parent, 0, 0);
 
     _lblEmpty = lv_label_create(parent);
-    lv_obj_set_style_text_font(_lblEmpty, &lv_font_montserrat_14, 0);
+    lv_obj_set_style_text_font(_lblEmpty, &lv_font_ratdeck_14, 0);
     lv_obj_set_style_text_color(_lblEmpty, lv_color_hex(Theme::MUTED), 0);
     lv_label_set_text(_lblEmpty, "No saved contacts");
     lv_obj_center(_lblEmpty);
@@ -29,7 +30,7 @@ void LvContactsScreen::createUI(lv_obj_t* parent) {
     lv_obj_set_flex_flow(_list, LV_FLEX_FLOW_COLUMN);
 
     // Pre-allocate row pool
-    const lv_font_t* font = &lv_font_montserrat_14;
+    const lv_font_t* font = &lv_font_ratdeck_14;
     for (int i = 0; i < ROW_POOL_SIZE; i++) {
         lv_obj_t* row = lv_obj_create(_list);
         lv_obj_set_size(row, Theme::CONTENT_W, 28);

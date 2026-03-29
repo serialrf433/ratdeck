@@ -6,6 +6,7 @@
 #include "reticulum/AnnounceManager.h"
 #include <Arduino.h>
 #include <time.h>
+#include "fonts/fonts.h"
 
 std::string LvMessageView::getPeerName() {
     if (_am) {
@@ -26,7 +27,7 @@ void LvMessageView::createUI(lv_obj_t* parent) {
     lv_obj_set_flex_flow(parent, LV_FLEX_FLOW_COLUMN);
     lv_obj_set_style_pad_row(parent, 0, 0);
 
-    const lv_font_t* font = &lv_font_montserrat_12;
+    const lv_font_t* font = &lv_font_ratdeck_12;
     int headerH = 22;
     int inputH = 28;
 
@@ -43,7 +44,7 @@ void LvMessageView::createUI(lv_obj_t* parent) {
     lv_obj_clear_flag(_header, LV_OBJ_FLAG_SCROLLABLE);
 
     _lblHeader = lv_label_create(_header);
-    lv_obj_set_style_text_font(_lblHeader, &lv_font_montserrat_14, 0);
+    lv_obj_set_style_text_font(_lblHeader, &lv_font_ratdeck_14, 0);
     lv_obj_set_style_text_color(_lblHeader, lv_color_hex(Theme::ACCENT), 0);
     lv_obj_align(_lblHeader, LV_ALIGN_LEFT_MID, 4, 0);
 
@@ -90,7 +91,7 @@ void LvMessageView::createUI(lv_obj_t* parent) {
     lv_obj_set_style_radius(_btnSend, 3, 0);
     lv_obj_set_style_pad_all(_btnSend, 0, 0);
     lv_obj_t* sendLbl = lv_label_create(_btnSend);
-    lv_obj_set_style_text_font(sendLbl, &lv_font_montserrat_10, 0);
+    lv_obj_set_style_text_font(sendLbl, &lv_font_ratdeck_10, 0);
     lv_obj_set_style_text_color(sendLbl, lv_color_hex(Theme::PRIMARY), 0);
     lv_label_set_text(sendLbl, "Send");
     lv_obj_center(sendLbl);
@@ -183,7 +184,7 @@ void LvMessageView::refreshUI() {
 void LvMessageView::appendMessage(const LXMFMessage& msg) {
     if (!_msgScroll) return;
 
-    const lv_font_t* font = &lv_font_montserrat_12;
+    const lv_font_t* font = &lv_font_ratdeck_12;
     int maxBubbleW = Theme::CONTENT_W * 3 / 4;
 
     // Bubble container
@@ -246,7 +247,7 @@ void LvMessageView::appendMessage(const LXMFMessage& msg) {
             ind = "!"; indColor = Theme::ERROR_CLR;
         }
         lv_obj_t* statusLbl = lv_label_create(box);
-        lv_obj_set_style_text_font(statusLbl, &lv_font_montserrat_10, 0);
+        lv_obj_set_style_text_font(statusLbl, &lv_font_ratdeck_10, 0);
         lv_obj_set_style_text_color(statusLbl, lv_color_hex(indColor), 0);
         lv_label_set_text(statusLbl, ind);
         lv_obj_align(statusLbl, LV_ALIGN_BOTTOM_RIGHT, 0, 0);
@@ -265,7 +266,7 @@ void LvMessageView::appendMessage(const LXMFMessage& msg) {
             char timeBuf[8];
             snprintf(timeBuf, sizeof(timeBuf), "%02d:%02d", tm->tm_hour, tm->tm_min);
             lv_obj_t* timeLbl = lv_label_create(bubble);
-            lv_obj_set_style_text_font(timeLbl, &lv_font_montserrat_10, 0);
+            lv_obj_set_style_text_font(timeLbl, &lv_font_ratdeck_10, 0);
             lv_obj_set_style_text_color(timeLbl, lv_color_hex(Theme::MUTED), 0);
             lv_label_set_text(timeLbl, timeBuf);
             if (msg.incoming) {

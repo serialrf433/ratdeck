@@ -6,6 +6,7 @@
 #include "config/UserConfig.h"
 #include <Arduino.h>
 #include <algorithm>
+#include "fonts/fonts.h"
 
 void LvNodesScreen::createUI(lv_obj_t* parent) {
     _screen = parent;
@@ -14,7 +15,7 @@ void LvNodesScreen::createUI(lv_obj_t* parent) {
 
     // Empty state label
     _lblEmpty = lv_label_create(parent);
-    lv_obj_set_style_text_font(_lblEmpty, &lv_font_montserrat_14, 0);
+    lv_obj_set_style_text_font(_lblEmpty, &lv_font_ratdeck_14, 0);
     lv_obj_set_style_text_color(_lblEmpty, lv_color_hex(Theme::MUTED), 0);
     lv_label_set_text(_lblEmpty, "No nodes discovered");
     lv_obj_center(_lblEmpty);
@@ -34,8 +35,8 @@ void LvNodesScreen::createUI(lv_obj_t* parent) {
     lv_obj_set_flex_flow(_list, LV_FLEX_FLOW_COLUMN);
 
     // Pre-allocate ROW_POOL_SIZE row widgets
-    const lv_font_t* font = &lv_font_montserrat_14;
-    const lv_font_t* smallFont = &lv_font_montserrat_10;
+    const lv_font_t* font = &lv_font_ratdeck_14;
+    const lv_font_t* smallFont = &lv_font_ratdeck_10;
 
     for (int i = 0; i < ROW_POOL_SIZE; i++) {
         lv_obj_t* row = lv_obj_create(_list);
@@ -90,7 +91,7 @@ void LvNodesScreen::createUI(lv_obj_t* parent) {
     const char* menuText[] = {"Add Contact", "Message", "Back"};
     for (int i = 0; i < 3; i++) {
         _menuLabels[i] = lv_label_create(_overlay);
-        lv_obj_set_style_text_font(_menuLabels[i], &lv_font_montserrat_14, 0);
+        lv_obj_set_style_text_font(_menuLabels[i], &lv_font_ratdeck_14, 0);
         lv_obj_set_style_text_color(_menuLabels[i], lv_color_hex(Theme::PRIMARY), 0);
         lv_label_set_text(_menuLabels[i], menuText[i]);
     }
@@ -109,17 +110,17 @@ void LvNodesScreen::createUI(lv_obj_t* parent) {
     lv_obj_add_flag(_nicknameBox, LV_OBJ_FLAG_HIDDEN);
 
     lv_obj_t* nickTitle = lv_label_create(_nicknameBox);
-    lv_obj_set_style_text_font(nickTitle, &lv_font_montserrat_12, 0);
+    lv_obj_set_style_text_font(nickTitle, &lv_font_ratdeck_12, 0);
     lv_obj_set_style_text_color(nickTitle, lv_color_hex(Theme::ACCENT), 0);
     lv_label_set_text(nickTitle, "Enter nickname:");
 
     _nicknameLbl = lv_label_create(_nicknameBox);
-    lv_obj_set_style_text_font(_nicknameLbl, &lv_font_montserrat_14, 0);
+    lv_obj_set_style_text_font(_nicknameLbl, &lv_font_ratdeck_14, 0);
     lv_obj_set_style_text_color(_nicknameLbl, lv_color_hex(Theme::PRIMARY), 0);
     lv_label_set_text(_nicknameLbl, "_");
 
     _nicknameHint = lv_label_create(_nicknameBox);
-    lv_obj_set_style_text_font(_nicknameHint, &lv_font_montserrat_10, 0);
+    lv_obj_set_style_text_font(_nicknameHint, &lv_font_ratdeck_10, 0);
     lv_obj_set_style_text_color(_nicknameHint, lv_color_hex(Theme::MUTED), 0);
     lv_label_set_text(_nicknameHint, "Enter=Save  Esc=Cancel");
 }
@@ -261,7 +262,7 @@ void LvNodesScreen::syncVisibleRows() {
             lv_obj_set_style_border_width(_poolRows[i], 1, 0);
             lv_obj_set_style_border_color(_poolRows[i], lv_color_hex(Theme::BORDER), 0);
             lv_obj_set_style_border_side(_poolRows[i], LV_BORDER_SIDE_BOTTOM, 0);
-            lv_obj_set_style_text_font(_poolNameLabels[i], &lv_font_montserrat_12, 0);
+            lv_obj_set_style_text_font(_poolNameLabels[i], &lv_font_ratdeck_12, 0);
             lv_obj_set_style_text_color(_poolNameLabels[i], lv_color_hex(Theme::ACCENT), 0);
             lv_label_set_text(_poolNameLabels[i], buf);
             lv_obj_align(_poolNameLabels[i], LV_ALIGN_LEFT_MID, 4, 0);
@@ -287,7 +288,7 @@ void LvNodesScreen::syncVisibleRows() {
             std::string displayHash = node.hash.toHex().substr(0, 12);
             char buf[64];
             snprintf(buf, sizeof(buf), "%s [%s]", truncName.c_str(), displayHash.c_str());
-            lv_obj_set_style_text_font(_poolNameLabels[i], &lv_font_montserrat_12, 0);
+            lv_obj_set_style_text_font(_poolNameLabels[i], &lv_font_ratdeck_12, 0);
             lv_obj_set_style_text_color(_poolNameLabels[i], lv_color_hex(
                 node.saved ? Theme::ACCENT : Theme::PRIMARY), 0);
             lv_label_set_text(_poolNameLabels[i], buf);

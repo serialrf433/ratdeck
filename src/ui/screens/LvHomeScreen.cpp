@@ -8,6 +8,7 @@
 #include "transport/TCPClientInterface.h"
 #include <Arduino.h>
 #include <WiFi.h>
+#include "fonts/fonts.h"
 
 void LvHomeScreen::createUI(lv_obj_t* parent) {
     _screen = parent;
@@ -17,7 +18,7 @@ void LvHomeScreen::createUI(lv_obj_t* parent) {
     lv_obj_set_style_pad_row(parent, 4, 0);
     lv_obj_clear_flag(parent, LV_OBJ_FLAG_SCROLLABLE);
 
-    const lv_font_t* font = &lv_font_montserrat_14;
+    const lv_font_t* font = &lv_font_ratdeck_14;
     auto mkLabel = [&](const char* initial) -> lv_obj_t* {
         lv_obj_t* lbl = lv_label_create(parent);
         lv_obj_set_style_text_font(lbl, font, 0);

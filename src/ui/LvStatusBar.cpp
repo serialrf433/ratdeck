@@ -2,6 +2,7 @@
 #include "Theme.h"
 #include <Arduino.h>
 #include <time.h>
+#include "fonts/fonts.h"
 
 void LvStatusBar::create(lv_obj_t* parent) {
     _bar = lv_obj_create(parent);
@@ -16,7 +17,7 @@ void LvStatusBar::create(lv_obj_t* parent) {
     lv_obj_set_style_radius(_bar, 0, 0);
     lv_obj_clear_flag(_bar, LV_OBJ_FLAG_SCROLLABLE);
 
-    const lv_font_t* font = &lv_font_montserrat_12;
+    const lv_font_t* font = &lv_font_ratdeck_12;
 
     // Left: Time display (hidden until valid time is available)
     _lblTime = lv_label_create(_bar);

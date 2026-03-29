@@ -7,6 +7,7 @@
 #include <Arduino.h>
 #include <time.h>
 #include <algorithm>
+#include "fonts/fonts.h"
 
 void LvMessagesScreen::createUI(lv_obj_t* parent) {
     _screen = parent;
@@ -14,7 +15,7 @@ void LvMessagesScreen::createUI(lv_obj_t* parent) {
     lv_obj_set_style_pad_all(parent, 0, 0);
 
     _lblEmpty = lv_label_create(parent);
-    lv_obj_set_style_text_font(_lblEmpty, &lv_font_montserrat_14, 0);
+    lv_obj_set_style_text_font(_lblEmpty, &lv_font_ratdeck_14, 0);
     lv_obj_set_style_text_color(_lblEmpty, lv_color_hex(Theme::MUTED), 0);
     lv_label_set_text(_lblEmpty, "No conversations");
     lv_obj_center(_lblEmpty);
@@ -33,8 +34,8 @@ void LvMessagesScreen::createUI(lv_obj_t* parent) {
     lv_obj_set_flex_flow(_list, LV_FLEX_FLOW_COLUMN);
 
     // Pre-allocate row pool (following LvNodesScreen pattern)
-    const lv_font_t* nameFont = &lv_font_montserrat_14;
-    const lv_font_t* smallFont = &lv_font_montserrat_12;
+    const lv_font_t* nameFont = &lv_font_ratdeck_14;
+    const lv_font_t* smallFont = &lv_font_ratdeck_12;
 
     for (int i = 0; i < ROW_POOL_SIZE; i++) {
         lv_obj_t* row = lv_obj_create(_list);
@@ -69,7 +70,7 @@ void LvMessagesScreen::createUI(lv_obj_t* parent) {
 
         // Time label (line 1, right)
         lv_obj_t* timeLbl = lv_label_create(row);
-        lv_obj_set_style_text_font(timeLbl, &lv_font_montserrat_10, 0);
+        lv_obj_set_style_text_font(timeLbl, &lv_font_ratdeck_10, 0);
         lv_obj_set_style_text_color(timeLbl, lv_color_hex(Theme::MUTED), 0);
         lv_label_set_text(timeLbl, "");
         lv_obj_align(timeLbl, LV_ALIGN_TOP_RIGHT, -4, 4);

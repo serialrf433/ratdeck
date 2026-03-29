@@ -18,6 +18,7 @@
 #include <WiFi.h>
 #include <HTTPClient.h>
 #include <ArduinoJson.h>
+#include "fonts/fonts.h"
 
 struct RadioPresetLv {
     const char* name;
@@ -701,7 +702,7 @@ void LvSettingsScreen::rebuildCategoryList() {
     _rowObjs.clear();
     lv_obj_clean(_scrollContainer);
 
-    const lv_font_t* font = &lv_font_montserrat_12;
+    const lv_font_t* font = &lv_font_ratdeck_12;
 
     // Title
     lv_obj_t* titleRow = lv_obj_create(_scrollContainer);
@@ -744,7 +745,7 @@ void LvSettingsScreen::rebuildCategoryList() {
         // Summary
         if (cat.summary) {
             lv_obj_t* sumLbl = lv_label_create(row);
-            lv_obj_set_style_text_font(sumLbl, &lv_font_montserrat_10, 0);
+            lv_obj_set_style_text_font(sumLbl, &lv_font_ratdeck_10, 0);
             lv_obj_set_style_text_color(sumLbl, lv_color_hex(Theme::MUTED), 0);
             lv_label_set_text(sumLbl, cat.summary().c_str());
             lv_obj_align(sumLbl, LV_ALIGN_BOTTOM_LEFT, 20, -2);
@@ -766,7 +767,7 @@ void LvSettingsScreen::rebuildItemList() {
     _rowObjs.clear();
     lv_obj_clean(_scrollContainer);
 
-    const lv_font_t* font = &lv_font_montserrat_12;
+    const lv_font_t* font = &lv_font_ratdeck_12;
 
     // Category header
     lv_obj_t* headerRow = lv_obj_create(_scrollContainer);
@@ -876,7 +877,7 @@ void LvSettingsScreen::rebuildWifiList() {
     _rowObjs.clear();
     lv_obj_clean(_scrollContainer);
 
-    const lv_font_t* font = &lv_font_montserrat_12;
+    const lv_font_t* font = &lv_font_ratdeck_12;
 
     // Header
     lv_obj_t* headerRow = lv_obj_create(_scrollContainer);
@@ -928,7 +929,7 @@ void LvSettingsScreen::rebuildWifiList() {
         char sigBuf[12];
         snprintf(sigBuf, sizeof(sigBuf), "%ddBm", net.rssi);
         lv_obj_t* sigLbl = lv_label_create(row);
-        lv_obj_set_style_text_font(sigLbl, &lv_font_montserrat_10, 0);
+        lv_obj_set_style_text_font(sigLbl, &lv_font_ratdeck_10, 0);
         lv_obj_set_style_text_color(sigLbl, lv_color_hex(Theme::MUTED), 0);
         lv_label_set_text(sigLbl, sigBuf);
         lv_obj_align(sigLbl, LV_ALIGN_RIGHT_MID, -4, 0);

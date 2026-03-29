@@ -1,6 +1,7 @@
 #include "LvHelpOverlay.h"
 #include "ui/Theme.h"
 #include <lvgl.h>
+#include "fonts/fonts.h"
 
 void LvHelpOverlay::create() {
     _overlay = lv_obj_create(lv_layer_top());
@@ -16,7 +17,7 @@ void LvHelpOverlay::create() {
     lv_obj_set_layout(_overlay, LV_LAYOUT_FLEX);
     lv_obj_set_flex_flow(_overlay, LV_FLEX_FLOW_COLUMN);
 
-    const lv_font_t* font = &lv_font_montserrat_12;
+    const lv_font_t* font = &lv_font_ratdeck_12;
 
     auto mkLabel = [&](const char* text, uint32_t color) {
         lv_obj_t* lbl = lv_label_create(_overlay);

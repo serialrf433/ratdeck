@@ -1,6 +1,7 @@
 #include "LvTabBar.h"
 #include "Theme.h"
 #include <cstdio>
+#include "fonts/fonts.h"
 
 constexpr const char* LvTabBar::TAB_NAMES[TAB_COUNT];
 
@@ -33,7 +34,7 @@ void LvTabBar::create(lv_obj_t* parent) {
     lv_obj_set_flex_flow(_bar, LV_FLEX_FLOW_ROW);
     lv_obj_set_flex_align(_bar, LV_FLEX_ALIGN_SPACE_EVENLY, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
 
-    const lv_font_t* font = &lv_font_montserrat_12;
+    const lv_font_t* font = &lv_font_ratdeck_12;
 
     for (int i = 0; i < TAB_COUNT; i++) {
         _tabs[i] = lv_label_create(_bar);

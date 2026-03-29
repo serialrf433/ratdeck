@@ -2,6 +2,7 @@
 #include "ui/Theme.h"
 #include "ui/LvTheme.h"
 #include "config/Config.h"
+#include "fonts/fonts.h"
 
 void LvBootScreen::createUI(lv_obj_t* parent) {
     _screen = parent;
@@ -18,7 +19,7 @@ void LvBootScreen::createUI(lv_obj_t* parent) {
 
     // Version
     _lblVersion = lv_label_create(parent);
-    lv_obj_set_style_text_font(_lblVersion, &lv_font_montserrat_12, 0);
+    lv_obj_set_style_text_font(_lblVersion, &lv_font_ratdeck_12, 0);
     lv_obj_set_style_text_color(_lblVersion, lv_color_hex(Theme::SECONDARY), 0);
     char ver[32];
     snprintf(ver, sizeof(ver), "v%s", RATDECK_VERSION_STRING);
@@ -36,7 +37,7 @@ void LvBootScreen::createUI(lv_obj_t* parent) {
 
     // Status text
     _lblStatus = lv_label_create(parent);
-    lv_obj_set_style_text_font(_lblStatus, &lv_font_montserrat_12, 0);
+    lv_obj_set_style_text_font(_lblStatus, &lv_font_ratdeck_12, 0);
     lv_obj_set_style_text_color(_lblStatus, lv_color_hex(Theme::SECONDARY), 0);
     lv_label_set_text(_lblStatus, "Starting...");
     lv_obj_align(_lblStatus, LV_ALIGN_TOP_MID, 0, 128);

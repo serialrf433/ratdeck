@@ -1,6 +1,7 @@
 #include "LvTheme.h"
 #include "Theme.h"
 #include <Arduino.h>
+#include "fonts/fonts.h"
 
 namespace LvTheme {
 
@@ -27,7 +28,7 @@ void init(lv_disp_t* disp) {
     lv_style_set_bg_color(&s_screen, lv_color_hex(Theme::BG));
     lv_style_set_bg_opa(&s_screen, LV_OPA_COVER);
     lv_style_set_text_color(&s_screen, lv_color_hex(Theme::PRIMARY));
-    lv_style_set_text_font(&s_screen, &lv_font_montserrat_14);
+    lv_style_set_text_font(&s_screen, &lv_font_ratdeck_14);
 
     // Labels
     lv_style_init(&s_label);

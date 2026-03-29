@@ -2,14 +2,15 @@
 #include "ui/Theme.h"
 #include "ui/LvTheme.h"
 #include "config/Config.h"
+#include "fonts/fonts.h"
 
 void LvTimezoneScreen::createUI(lv_obj_t* parent) {
     _screen = parent;
     lv_obj_clear_flag(parent, LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_set_style_bg_color(parent, lv_color_hex(Theme::BG), 0);
 
-    const lv_font_t* font12 = &lv_font_montserrat_12;
-    const lv_font_t* font14 = &lv_font_montserrat_14;
+    const lv_font_t* font12 = &lv_font_ratdeck_12;
+    const lv_font_t* font14 = &lv_font_ratdeck_14;
 
     // Title
     lv_obj_t* title = lv_label_create(parent);
@@ -94,8 +95,8 @@ void LvTimezoneScreen::updateSelection(int oldIdx, int newIdx) {
     if (!_scrollContainer) return;
     uint32_t count = lv_obj_get_child_cnt(_scrollContainer);
 
-    const lv_font_t* font14 = &lv_font_montserrat_14;
-    const lv_font_t* font12 = &lv_font_montserrat_12;
+    const lv_font_t* font14 = &lv_font_ratdeck_14;
+    const lv_font_t* font12 = &lv_font_ratdeck_12;
 
     // Deselect old
     if (oldIdx >= 0 && oldIdx < (int)count) {
