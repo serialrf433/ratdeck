@@ -103,6 +103,7 @@ void InputManager::update() {
                     // Short click — generate deferred enter event
                     _keyEvent = {};
                     _keyEvent.enter = true;
+                    _keyEvent.character = '\n';
                     _hasKey = true;
                     _activity = true;
                     _strongActivity = true;

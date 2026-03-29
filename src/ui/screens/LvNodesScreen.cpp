@@ -73,7 +73,7 @@ void LvNodesScreen::createUI(lv_obj_t* parent) {
     // --- Action modal overlay (hidden initially) ---
     _overlay = lv_obj_create(parent);
     lv_obj_set_size(_overlay, 180, 100);
-    lv_obj_center(_overlay);
+    lv_obj_set_pos(_overlay, (Theme::CONTENT_W - 180) / 2, (Theme::CONTENT_H - 100) / 2);
     lv_obj_set_style_bg_color(_overlay, lv_color_hex(0x001100), 0);
     lv_obj_set_style_bg_opa(_overlay, LV_OPA_COVER, 0);
     lv_obj_set_style_border_width(_overlay, 1, 0);
@@ -314,6 +314,7 @@ void LvNodesScreen::syncVisibleRows() {
     }
 
     _dataChanged = false;
+    scrollToSelected();
 }
 
 // Helper: get node index for a given logical entry, -1 for headers
