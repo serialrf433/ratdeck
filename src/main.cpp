@@ -985,6 +985,11 @@ void loop() {
         }
     }
 
+    // 4.5 Keep LVGL responsive after heavy RNS processing (announce floods)
+    if (rnsDuration > LVGL_INTERVAL_MS && powerMgr.isScreenOn()) {
+        lv_timer_handler();
+    }
+
     // 5. Auto-announce every 5-360 minutes (user configured)
     const unsigned long announceInterval = (unsigned long)userConfig.settings().announceInterval * 60000; // m -> ms
     if (bootComplete && millis() - lastAutoAnnounce >= announceInterval) {

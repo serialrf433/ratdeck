@@ -50,7 +50,7 @@
 #define RATDECK_MAX_ANNOUNCES_PER_SEC 5     // Transport-level rate limit (before Ed25519 verify)
 
 // --- Limits ---
-#define RATDECK_MAX_NODES             200   // PSRAM allows more
+#define RATDECK_MAX_NODES             100   // Endpoint device, not transport node
 #define RATDECK_MAX_MESSAGES_PER_CONV 100
 #define FLASH_MSG_CACHE_LIMIT         20
 #define RATDECK_MAX_OUTQUEUE          20

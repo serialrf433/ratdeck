@@ -154,13 +154,13 @@ void AnnounceManager::received_announce(
         if (!name.empty()) node.name = name;
         if (!idHex.empty()) node.identityHex = idHex;
         node.lastSeen = now;
-        node.hops = RNS::Transport::hops_to(destination_hash);
+        // hops_to() is expensive (linear routing table scan) — only call for saved contacts
+        if (node.saved) node.hops = RNS::Transport::hops_to(destination_hash);
         if (_loraIf) { node.rssi = _loraIf->lastRxRssi(); node.snr = _loraIf->lastRxSnr(); }
         if (node.saved) _contactsDirty = true;
-        // Only compute toHex for log + name cache when node actually updated
-        std::string destHex = destination_hash.toHex();
-        Serial.printf("[ANNOUNCE] Update: %s name=\"%s\"\n", destHex.c_str(), name.c_str());
+        // Name cache update — skip expensive toHex() for unnamed re-announces
         if (!name.empty()) {
+            std::string destHex = destination_hash.toHex();
             auto nc = _nameCache.find(destHex);
             if (nc == _nameCache.end() || nc->second != name) {
                 _nameCache[destHex] = name;
@@ -229,7 +229,7 @@ void AnnounceManager::received_announce(
     node.name = name.empty() ? destHex.substr(0, 12) : name;
     node.identityHex = idHex;
     node.lastSeen = millis();
-    node.hops = RNS::Transport::hops_to(destination_hash);
+    // Skip hops_to() for new (unsaved) nodes — resolved when added as contact
     if (_loraIf) { node.rssi = _loraIf->lastRxRssi(); node.snr = _loraIf->lastRxSnr(); }
     _hashIndex[key] = (int)_nodes.size();
     _nodes.push_back(node);
