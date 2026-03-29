@@ -154,6 +154,7 @@ bool ReticulumManager::begin(SX1262* radio, FlashStore* flash) {
     _destination.accepts_links(true);
 
     _transportActive = true;
+    startPersistTask();
     Serial.println("[RNS] Endpoint active");
     return true;
 }
@@ -248,37 +249,67 @@ void ReticulumManager::loop() {
     }
 }
 
-void ReticulumManager::persistData() {
-    // Rotate through persist steps to spread file I/O across cycles
-    switch (_persistCycle) {
-        case 0:
-            RNS::Transport::persist_data();
-            break;
-        case 1:
-            RNS::Identity::persist_data();
-            break;
-        case 2:
-            // Backup routing tables and known destinations to SD
-            if (_sd && _sd->isReady()) {
-                static const char* files[] = {"/destination_table", "/packet_hashlist", "/known_destinations"};
-                for (const char* name : files) {
-                    File f = LittleFS.open(name, "r");
-                    if (f && f.size() > 0) {
-                        size_t sz = f.size();
-                        uint8_t* buf = (uint8_t*)malloc(sz);
-                        if (buf) {
-                            f.readBytes((char*)buf, sz);
-                            char sdPath[64];
-                            snprintf(sdPath, sizeof(sdPath), "/ratputer/transport%s", name);
-                            _sd->ensureDir("/ratputer/transport");
-                            _sd->writeSimple(sdPath, buf, sz);
-                            free(buf);
+// --- Background persist task (runs on core 0) ---
+// Flash writes take 0.5-4+ seconds on LittleFS. Running them on core 0
+// keeps the main loop (core 1) responsive for UI and radio.
+
+void ReticulumManager::startPersistTask() {
+    _persistQueue = xQueueCreate(1, sizeof(uint8_t));
+    xTaskCreatePinnedToCore(persistTaskFunc, "persist", 8192, this, 1, &_persistTask, 0);
+    Serial.println("[RNS] Persist task started on core 0");
+}
+
+void ReticulumManager::persistTaskFunc(void* param) {
+    ReticulumManager* self = (ReticulumManager*)param;
+    uint8_t cycle;
+    for (;;) {
+        if (xQueueReceive(self->_persistQueue, &cycle, portMAX_DELAY) == pdTRUE) {
+            unsigned long start = millis();
+            switch (cycle) {
+                case 0:
+                    RNS::Transport::persist_data();
+                    break;
+                case 1:
+                    RNS::Identity::persist_data();
+                    break;
+                case 2:
+                    if (self->_sd && self->_sd->isReady()) {
+                        static const char* files[] = {"/destination_table", "/packet_hashlist", "/known_destinations"};
+                        for (const char* name : files) {
+                            File f = LittleFS.open(name, "r");
+                            if (f && f.size() > 0) {
+                                size_t sz = f.size();
+                                uint8_t* buf = (uint8_t*)malloc(sz);
+                                if (buf) {
+                                    f.readBytes((char*)buf, sz);
+                                    char sdPath[64];
+                                    snprintf(sdPath, sizeof(sdPath), "/ratputer/transport%s", name);
+                                    self->_sd->ensureDir("/ratputer/transport");
+                                    self->_sd->writeSimple(sdPath, buf, sz);
+                                    free(buf);
+                                }
+                            }
+                            if (f) f.close();
                         }
                     }
-                    if (f) f.close();
-                }
+                    break;
             }
-            break;
+            Serial.printf("[PERSIST] Cycle %d done (%lums, core %d)\n",
+                          cycle, millis() - start, xPortGetCoreID());
+        }
+    }
+}
+
+void ReticulumManager::persistData() {
+    if (_persistQueue) {
+        // Queue the cycle for background execution — non-blocking
+        xQueueOverwrite(_persistQueue, &_persistCycle);
+    } else {
+        // Fallback: synchronous (before task is started)
+        switch (_persistCycle) {
+            case 0: RNS::Transport::persist_data(); break;
+            case 1: RNS::Identity::persist_data(); break;
+        }
     }
     _persistCycle = (_persistCycle + 1) % 3;
 }
