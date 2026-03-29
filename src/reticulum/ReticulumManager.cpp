@@ -94,6 +94,9 @@ bool ReticulumManager::begin(SX1262* radio, FlashStore* flash) {
     }
 
     _reticulum = RNS::Reticulum();
+    // Suppress verbose microReticulum logging — LOG_TRACE floods serial at 115200 baud,
+    // blocking the CPU for hundreds of ms. Change to LOG_TRACE or LOG_DEBUG for protocol debugging.
+    RNS::loglevel(RNS::LOG_WARNING);
     RNS::Reticulum::transport_enabled(false);
     RNS::Reticulum::probe_destination_enabled(true);
     RNS::Transport::path_table_maxsize(256);

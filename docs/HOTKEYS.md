@@ -90,3 +90,15 @@ When a text field is active (message compose, WiFi password, etc.):
 **Ctrl+T** sends a test packet and verifies FIFO readback.
 
 **Ctrl+R** samples RSSI continuously for 5 seconds.
+
+## Verbose Protocol Logging
+
+microReticulum logging is set to `LOG_WARNING` by default for performance.
+To enable full protocol trace logging for debugging, change the log level in
+`src/reticulum/ReticulumManager.cpp`:
+
+```cpp
+RNS::loglevel(RNS::LOG_TRACE);  // Full protocol logging (WARNING: blocks CPU at 115200 baud)
+```
+
+Available levels: `LOG_WARNING` (default), `LOG_NOTICE`, `LOG_INFO`, `LOG_VERBOSE`, `LOG_DEBUG`, `LOG_TRACE`.
