@@ -25,14 +25,14 @@ struct RadioPresetLv {
     uint8_t sf; uint32_t bw; uint8_t cr; int8_t txPower; long preamble;
 };
 static const RadioPresetLv LV_PRESETS[] = {
-    {"Short Turbo (21.99 kbps, 140dB)",     7,  500000, 5,  14, 18},
-    {"Short Fast (10.84 kbps, 143dB)",      7,  250000, 5,  14, 18},
-    {"Short Slow (6.25 kbps, 145.5dB)",     8,  250000, 5,  14, 18},
-    {"Medium Fast (3.52 kbps, 148dB)",      9,  250000, 5,  17, 18},
-    {"Medium Slow (1.95 kbps, 150.5dB)",    10, 250000, 5,  17, 18},
-    {"Long Turbo (1.34 kbps, 150dB)",       11, 500000, 8,  22, 18},
-    {"Long Fast (1.07 kbps, 153dB)",        11, 250000, 5,  22, 18},
-    {"Long Moderate (0.34 kbps, 156dB)",    11, 125000, 8,  22, 18},
+    {"Short Turbo",   7,  500000, 5,  14, 18},
+    {"Short Fast",    7,  250000, 5,  14, 18},
+    {"Short Slow",    8,  250000, 5,  14, 18},
+    {"Medium Fast",   9,  250000, 5,  17, 18},
+    {"Medium Slow",   10, 250000, 5,  17, 18},
+    {"Long Turbo",    11, 500000, 8,  22, 18},
+    {"Long Fast",     11, 250000, 5,  22, 18},
+    {"Long Moderate", 11, 125000, 8,  22, 18},
 };
 static constexpr int LV_NUM_PRESETS = 8;
 
