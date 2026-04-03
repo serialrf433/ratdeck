@@ -104,8 +104,13 @@ void init(lv_disp_t* disp) {
 
     lv_style_init(&s_listBtnFocused);
     lv_style_set_bg_color(&s_listBtnFocused, lv_color_hex(Theme::SELECTION_BG));
+    lv_style_set_bg_opa(&s_listBtnFocused, LV_OPA_COVER);
+    lv_style_set_text_color(&s_listBtnFocused, lv_color_hex(Theme::ACCENT));
     lv_style_set_border_color(&s_listBtnFocused, lv_color_hex(Theme::PRIMARY));
     lv_style_set_border_width(&s_listBtnFocused, 1);
+    // Override LVGL's default blue focus outline
+    lv_style_set_outline_width(&s_listBtnFocused, 0);
+    lv_style_set_outline_opa(&s_listBtnFocused, LV_OPA_TRANSP);
 
     // Dropdown
     lv_style_init(&s_dropdown);

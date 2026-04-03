@@ -1,5 +1,7 @@
 #include "LvMessagesScreen.h"
 #include "ui/Theme.h"
+#include "ui/LvTheme.h"
+#include "ui/LvInput.h"
 #include "ui/UIManager.h"
 #include "reticulum/LXMFManager.h"
 #include "reticulum/AnnounceManager.h"
@@ -22,85 +24,9 @@ void LvMessagesScreen::createUI(lv_obj_t* parent) {
 
     _list = lv_obj_create(parent);
     lv_obj_set_size(_list, lv_pct(100), lv_pct(100));
-    lv_obj_set_pos(_list, 0, 0);
-    lv_obj_set_flex_grow(_list, 1);
-    lv_obj_set_style_bg_color(_list, lv_color_hex(Theme::BG), 0);
-    lv_obj_set_style_bg_opa(_list, LV_OPA_COVER, 0);
-    lv_obj_set_style_border_width(_list, 0, 0);
-    lv_obj_set_style_pad_all(_list, 0, 0);
-    lv_obj_set_style_pad_row(_list, 0, 0);
-    lv_obj_set_style_radius(_list, 0, 0);
+    lv_obj_add_style(_list, LvTheme::styleList(), 0);
     lv_obj_set_layout(_list, LV_LAYOUT_FLEX);
     lv_obj_set_flex_flow(_list, LV_FLEX_FLOW_COLUMN);
-
-    // Pre-allocate row pool (following LvNodesScreen pattern)
-    const lv_font_t* nameFont = &lv_font_ratdeck_14;
-    const lv_font_t* smallFont = &lv_font_ratdeck_12;
-
-    for (int i = 0; i < ROW_POOL_SIZE; i++) {
-        lv_obj_t* row = lv_obj_create(_list);
-        lv_obj_set_size(row, Theme::CONTENT_W, 38);
-        lv_obj_set_style_bg_color(row, lv_color_hex(Theme::BG), 0);
-        lv_obj_set_style_bg_opa(row, LV_OPA_COVER, 0);
-        lv_obj_set_style_border_color(row, lv_color_hex(Theme::BORDER), 0);
-        lv_obj_set_style_border_width(row, 1, 0);
-        lv_obj_set_style_border_side(row, LV_BORDER_SIDE_BOTTOM, 0);
-        lv_obj_set_style_pad_all(row, 0, 0);
-        lv_obj_set_style_radius(row, 0, 0);
-        lv_obj_clear_flag(row, LV_OBJ_FLAG_SCROLLABLE);
-        lv_obj_add_flag(row, LV_OBJ_FLAG_CLICKABLE);
-        lv_obj_add_flag(row, LV_OBJ_FLAG_HIDDEN);
-        lv_obj_set_user_data(row, (void*)(intptr_t)i);
-        lv_obj_add_event_cb(row, [](lv_event_t* e) {
-            auto* self = (LvMessagesScreen*)lv_event_get_user_data(e);
-            lv_obj_t* target = lv_event_get_target(e);
-            int poolIdx = (int)(intptr_t)lv_obj_get_user_data(target);
-            int dataIdx = self->_viewportStart + poolIdx;
-            if (dataIdx < (int)self->_sortedPeers.size() && self->_onOpen) {
-                self->_selectedIdx = dataIdx;
-                self->syncVisibleRows();
-                self->_onOpen(self->_sortedPeers[dataIdx]);
-            }
-        }, LV_EVENT_CLICKED, this);
-
-        // Unread dot
-        lv_obj_t* dot = lv_obj_create(row);
-        lv_obj_set_size(dot, 6, 6);
-        lv_obj_set_style_radius(dot, 3, 0);
-        lv_obj_set_style_bg_color(dot, lv_color_hex(Theme::PRIMARY), 0);
-        lv_obj_set_style_bg_opa(dot, LV_OPA_COVER, 0);
-        lv_obj_set_style_border_width(dot, 0, 0);
-        lv_obj_set_style_pad_all(dot, 0, 0);
-        lv_obj_set_pos(dot, 5, 8);
-        lv_obj_add_flag(dot, LV_OBJ_FLAG_HIDDEN);
-
-        // Name label (line 1)
-        lv_obj_t* nameLbl = lv_label_create(row);
-        lv_obj_set_style_text_font(nameLbl, nameFont, 0);
-        lv_obj_set_style_text_color(nameLbl, lv_color_hex(Theme::PRIMARY), 0);
-        lv_label_set_text(nameLbl, "");
-        lv_obj_align(nameLbl, LV_ALIGN_TOP_LEFT, 14, 2);
-
-        // Time label (line 1, right)
-        lv_obj_t* timeLbl = lv_label_create(row);
-        lv_obj_set_style_text_font(timeLbl, &lv_font_ratdeck_10, 0);
-        lv_obj_set_style_text_color(timeLbl, lv_color_hex(Theme::MUTED), 0);
-        lv_label_set_text(timeLbl, "");
-        lv_obj_align(timeLbl, LV_ALIGN_TOP_RIGHT, -4, 4);
-
-        // Preview label (line 2)
-        lv_obj_t* prevLbl = lv_label_create(row);
-        lv_obj_set_style_text_font(prevLbl, smallFont, 0);
-        lv_obj_set_style_text_color(prevLbl, lv_color_hex(Theme::MUTED), 0);
-        lv_label_set_text(prevLbl, "");
-        lv_obj_align(prevLbl, LV_ALIGN_BOTTOM_LEFT, 14, -4);
-
-        _poolRows[i] = row;
-        _poolDots[i] = dot;
-        _poolNameLabels[i] = nameLbl;
-        _poolTimeLabels[i] = timeLbl;
-        _poolPreviewLabels[i] = prevLbl;
-    }
 
     _lastConvCount = -1;
     rebuildList();
@@ -108,8 +34,6 @@ void LvMessagesScreen::createUI(lv_obj_t* parent) {
 
 void LvMessagesScreen::onEnter() {
     _lastConvCount = -1;
-    _selectedIdx = 0;
-    _viewportStart = 0;
     rebuildList();
 }
 
@@ -122,11 +46,6 @@ void LvMessagesScreen::refreshUI() {
     }
 }
 
-// Update only the selection highlight via pool sync
-void LvMessagesScreen::updateSelection(int oldIdx, int newIdx) {
-    syncVisibleRows();
-}
-
 void LvMessagesScreen::rebuildList() {
     if (!_lxmf || !_list) return;
 
@@ -137,10 +56,11 @@ void LvMessagesScreen::rebuildList() {
     _sortedPeers.clear();
     _sortedConvs.clear();
 
+    lv_obj_clean(_list);
+
     if (count == 0) {
         lv_obj_clear_flag(_lblEmpty, LV_OBJ_FLAG_HIDDEN);
         lv_obj_add_flag(_list, LV_OBJ_FLAG_HIDDEN);
-        for (int i = 0; i < ROW_POOL_SIZE; i++) lv_obj_add_flag(_poolRows[i], LV_OBJ_FLAG_HIDDEN);
         return;
     }
 
@@ -158,7 +78,6 @@ void LvMessagesScreen::rebuildList() {
             ci.preview = s->lastPreview;
             ci.hasUnread = s->unreadCount > 0;
         }
-        // Resolve display name
         std::string peerName;
         if (_am) peerName = _am->lookupName(ci.peerHex);
         ci.displayName = !peerName.empty() ? peerName.substr(0, 15) : ci.peerHex.substr(0, 12);
@@ -171,79 +90,97 @@ void LvMessagesScreen::rebuildList() {
 
     for (auto& ci : _sortedConvs) _sortedPeers.push_back(ci.peerHex);
 
-    if (_selectedIdx >= count) _selectedIdx = count - 1;
-    if (_selectedIdx < 0) _selectedIdx = 0;
+    // Build list items with focus group support
+    const lv_font_t* nameFont = &lv_font_ratdeck_14;
+    const lv_font_t* smallFont = &lv_font_ratdeck_12;
 
-    syncVisibleRows();
-}
+    for (int i = 0; i < count; i++) {
+        const auto& ci = _sortedConvs[i];
 
-void LvMessagesScreen::syncVisibleRows() {
-    if (!_list) return;
-    int count = (int)_sortedConvs.size();
+        lv_obj_t* row = lv_obj_create(_list);
+        lv_obj_set_size(row, Theme::CONTENT_W, 46);
+        lv_obj_add_style(row, LvTheme::styleListBtn(), 0);
+        lv_obj_add_style(row, LvTheme::styleListBtnFocused(), LV_STATE_FOCUSED);
+        lv_obj_set_style_border_side(row, LV_BORDER_SIDE_BOTTOM, 0);
+        lv_obj_set_style_border_width(row, 1, 0);
+        lv_obj_set_style_border_color(row, lv_color_hex(Theme::BORDER), 0);
+        lv_obj_clear_flag(row, LV_OBJ_FLAG_SCROLLABLE);
+        lv_obj_add_flag(row, LV_OBJ_FLAG_CLICKABLE);
+        lv_obj_set_user_data(row, (void*)(intptr_t)i);
 
-    if (count == 0) {
-        for (int i = 0; i < ROW_POOL_SIZE; i++) lv_obj_add_flag(_poolRows[i], LV_OBJ_FLAG_HIDDEN);
-        return;
-    }
+        lv_obj_add_event_cb(row, [](lv_event_t* e) {
+            auto* self = (LvMessagesScreen*)lv_event_get_user_data(e);
+            int idx = (int)(intptr_t)lv_obj_get_user_data(lv_event_get_target(e));
+            if (idx < (int)self->_sortedPeers.size() && self->_onOpen) {
+                self->_onOpen(self->_sortedPeers[idx]);
+            }
+        }, LV_EVENT_CLICKED, this);
 
-    // Compute viewport centered on selection
-    int halfPool = ROW_POOL_SIZE / 2;
-    _viewportStart = _selectedIdx - halfPool;
-    if (_viewportStart < 0) _viewportStart = 0;
-    if (_viewportStart + ROW_POOL_SIZE > count) {
-        _viewportStart = count - ROW_POOL_SIZE;
-        if (_viewportStart < 0) _viewportStart = 0;
-    }
+        lv_group_add_obj(LvInput::group(), row);
+        lv_obj_add_event_cb(row, [](lv_event_t* e) {
+            lv_obj_scroll_to_view(lv_event_get_target(e), LV_ANIM_ON);
+        }, LV_EVENT_FOCUSED, nullptr);
 
-    for (int i = 0; i < ROW_POOL_SIZE; i++) {
-        int convIdx = _viewportStart + i;
-        if (convIdx >= count) {
-            lv_obj_add_flag(_poolRows[i], LV_OBJ_FLAG_HIDDEN);
-            continue;
-        }
-
-        lv_obj_clear_flag(_poolRows[i], LV_OBJ_FLAG_HIDDEN);
-        const auto& ci = _sortedConvs[convIdx];
-        bool isSelected = (convIdx == _selectedIdx);
-
-        // Selection highlight
-        lv_obj_set_style_bg_color(_poolRows[i], lv_color_hex(
-            isSelected ? Theme::SELECTION_BG : Theme::BG), 0);
+        int leftPad = 14;
 
         // Unread dot
         if (ci.hasUnread) {
-            lv_obj_clear_flag(_poolDots[i], LV_OBJ_FLAG_HIDDEN);
-        } else {
-            lv_obj_add_flag(_poolDots[i], LV_OBJ_FLAG_HIDDEN);
+            lv_obj_t* dot = lv_obj_create(row);
+            lv_obj_set_size(dot, 6, 6);
+            lv_obj_set_style_radius(dot, 3, 0);
+            lv_obj_set_style_bg_color(dot, lv_color_hex(Theme::PRIMARY), 0);
+            lv_obj_set_style_bg_opa(dot, LV_OPA_COVER, 0);
+            lv_obj_set_style_border_width(dot, 0, 0);
+            lv_obj_set_style_pad_all(dot, 0, 0);
+            lv_obj_set_pos(dot, 4, 7);
         }
 
-        // Name
-        lv_label_set_text(_poolNameLabels[i], ci.displayName.c_str());
+        // Name (top-left, first line)
+        lv_obj_t* nameLbl = lv_label_create(row);
+        lv_obj_set_style_text_font(nameLbl, nameFont, 0);
+        lv_obj_set_style_text_color(nameLbl, lv_color_hex(Theme::PRIMARY), 0);
+        lv_label_set_text(nameLbl, ci.displayName.c_str());
+        lv_obj_set_pos(nameLbl, leftPad, 1);
 
-        // Time
+        // Time (top-right)
         if (ci.lastTs > 1700000000) {
             time_t t = (time_t)ci.lastTs;
             struct tm* tm = localtime(&t);
             if (tm) {
                 char timeBuf[8];
                 snprintf(timeBuf, sizeof(timeBuf), "%02d:%02d", tm->tm_hour, tm->tm_min);
-                lv_label_set_text(_poolTimeLabels[i], timeBuf);
-            } else {
-                lv_label_set_text(_poolTimeLabels[i], "");
+                lv_obj_t* timeLbl = lv_label_create(row);
+                lv_obj_set_style_text_font(timeLbl, &lv_font_ratdeck_10, 0);
+                lv_obj_set_style_text_color(timeLbl, lv_color_hex(Theme::MUTED), 0);
+                lv_label_set_text(timeLbl, timeBuf);
+                lv_obj_align(timeLbl, LV_ALIGN_TOP_RIGHT, -4, 3);
             }
-        } else {
-            lv_label_set_text(_poolTimeLabels[i], "");
         }
 
-        // Preview
-        lv_label_set_text(_poolPreviewLabels[i], ci.preview.c_str());
+        // Preview (second line, below name)
+        if (!ci.preview.empty()) {
+            lv_obj_t* prevLbl = lv_label_create(row);
+            lv_obj_set_style_text_font(prevLbl, smallFont, 0);
+            lv_obj_set_style_text_color(prevLbl, lv_color_hex(Theme::MUTED), 0);
+            lv_label_set_long_mode(prevLbl, LV_LABEL_LONG_CLIP);
+            lv_obj_set_width(prevLbl, Theme::CONTENT_W - leftPad - 8);
+            lv_label_set_text(prevLbl, ci.preview.c_str());
+            lv_obj_set_pos(prevLbl, leftPad, 20);
+        }
     }
+}
+
+int LvMessagesScreen::getFocusedPeerIdx() const {
+    lv_obj_t* focused = lv_group_get_focused(LvInput::group());
+    if (!focused) return -1;
+    return (int)(intptr_t)lv_obj_get_user_data(focused);
 }
 
 bool LvMessagesScreen::handleLongPress() {
     if (!_lxmf) return false;
-    int count = (int)_lxmf->conversations().size();
-    if (count == 0 || _selectedIdx >= count) return false;
+    int idx = getFocusedPeerIdx();
+    if (idx < 0 || idx >= (int)_sortedPeers.size()) return false;
+    _lpPeerIdx = idx;
     _lpState = LP_MENU;
     _menuIdx = 0;
     if (_ui) _ui->lvStatusBar().showToast("Up/Down: Add Friend | Delete | Cancel", 5000);
@@ -262,10 +199,8 @@ bool LvMessagesScreen::handleKey(const KeyEvent& event) {
             return true;
         }
         if (event.enter || event.character == '\n' || event.character == '\r') {
-            int count = (int)_lxmf->conversations().size();
-            if (_menuIdx == 0 && _selectedIdx < (int)_sortedPeers.size()) {
-                // Add friend
-                const auto& peerHex = _sortedPeers[_selectedIdx];
+            if (_menuIdx == 0 && _lpPeerIdx < (int)_sortedPeers.size()) {
+                const auto& peerHex = _sortedPeers[_lpPeerIdx];
                 if (_am) {
                     const DiscoveredNode* existing = _am->findNodeByHex(peerHex);
                     if (existing && !existing->saved) {
@@ -280,13 +215,11 @@ bool LvMessagesScreen::handleKey(const KeyEvent& event) {
                         if (_ui) _ui->lvStatusBar().showToast("Already a friend", 1200);
                     }
                 }
-            } else if (_menuIdx == 1 && _selectedIdx < (int)_sortedPeers.size()) {
-                // Confirm delete
+            } else if (_menuIdx == 1 && _lpPeerIdx < (int)_sortedPeers.size()) {
                 _lpState = LP_CONFIRM_DELETE;
                 if (_ui) _ui->lvStatusBar().showToast("Delete chat? Enter=Yes Esc=No", 5000);
                 return true;
             } else {
-                // Cancel
                 if (_ui) _ui->lvStatusBar().showToast("Cancelled", 800);
             }
             _lpState = LP_NONE;
@@ -303,8 +236,8 @@ bool LvMessagesScreen::handleKey(const KeyEvent& event) {
     // Confirm delete mode
     if (_lpState == LP_CONFIRM_DELETE) {
         if (event.enter || event.character == '\n' || event.character == '\r') {
-            if (_selectedIdx < (int)_sortedPeers.size()) {
-                const auto& peerHex = _sortedPeers[_selectedIdx];
+            if (_lpPeerIdx < (int)_sortedPeers.size()) {
+                const auto& peerHex = _sortedPeers[_lpPeerIdx];
                 _lxmf->markRead(peerHex);
                 extern MessageStore messageStore;
                 messageStore.deleteConversation(peerHex);
@@ -313,7 +246,6 @@ bool LvMessagesScreen::handleKey(const KeyEvent& event) {
                     _ui->lvStatusBar().showToast("Chat deleted", 1200);
                     _ui->lvTabBar().setUnreadCount(LvTabBar::TAB_MSGS, _lxmf->unreadCount());
                 }
-                _selectedIdx = 0;
                 _lastConvCount = -1;
                 rebuildList();
             }
@@ -325,30 +257,6 @@ bool LvMessagesScreen::handleKey(const KeyEvent& event) {
         return true;
     }
 
-    int count = (int)_lxmf->conversations().size();
-    if (count == 0) return false;
-
-    if (event.up) {
-        if (_selectedIdx > 0) {
-            int prev = _selectedIdx;
-            _selectedIdx--;
-            syncVisibleRows();
-        }
-        return true;
-    }
-    if (event.down) {
-        if (_selectedIdx < count - 1) {
-            int prev = _selectedIdx;
-            _selectedIdx++;
-            syncVisibleRows();
-        }
-        return true;
-    }
-    if (event.enter || event.character == '\n' || event.character == '\r') {
-        if (_selectedIdx < (int)_sortedPeers.size() && _onOpen) {
-            _onOpen(_sortedPeers[_selectedIdx]);
-        }
-        return true;
-    }
+    // Let LVGL focus group handle up/down/enter navigation
     return false;
 }

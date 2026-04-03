@@ -54,6 +54,7 @@ extern const lv_font_t lv_font_ratdeck_14;
 #define LV_USE_BTNMATRIX  1
 #define LV_USE_TEXTAREA   1
 #define LV_USE_LIST       1
+#define LV_USE_MENU       1
 #define LV_USE_BAR        1
 #define LV_USE_SLIDER     1
 #define LV_USE_SWITCH     1

@@ -1,6 +1,7 @@
 #include "LvSettingsScreen.h"
 #include "ui/Theme.h"
 #include "ui/LvTheme.h"
+#include "ui/LvInput.h"
 #include "config/Config.h"
 #include "config/UserConfig.h"
 #include "ui/screens/LvTimezoneScreen.h"  // For TIMEZONE_TABLE
@@ -734,11 +735,9 @@ void LvSettingsScreen::rebuildCategoryList() {
 
         lv_obj_t* row = lv_obj_create(_scrollContainer);
         lv_obj_set_size(row, Theme::CONTENT_W, 34);
-        lv_obj_set_style_bg_color(row, lv_color_hex(selected ? Theme::SELECTION_BG : Theme::BG), 0);
-        lv_obj_set_style_bg_opa(row, LV_OPA_COVER, 0);
-        lv_obj_set_style_border_width(row, 0, 0);
+        lv_obj_add_style(row, LvTheme::styleListBtn(), 0);
+        lv_obj_add_style(row, LvTheme::styleListBtnFocused(), LV_STATE_FOCUSED);
         lv_obj_set_style_pad_all(row, 0, 0);
-        lv_obj_set_style_radius(row, 0, 0);
         lv_obj_clear_flag(row, LV_OBJ_FLAG_SCROLLABLE);
         lv_obj_add_flag(row, LV_OBJ_FLAG_CLICKABLE);
         lv_obj_set_user_data(row, (void*)(intptr_t)i);
@@ -748,6 +747,10 @@ void LvSettingsScreen::rebuildCategoryList() {
             self->_categoryIdx = idx;
             self->enterCategory(idx);
         }, LV_EVENT_CLICKED, this);
+        lv_group_add_obj(LvInput::group(), row);
+        lv_obj_add_event_cb(row, [](lv_event_t* e) {
+            lv_obj_scroll_to_view(lv_event_get_target(e), LV_ANIM_ON);
+        }, LV_EVENT_FOCUSED, nullptr);
 
         // Category name + count
         char buf[48];
@@ -775,6 +778,11 @@ void LvSettingsScreen::rebuildCategoryList() {
         lv_obj_align(arrow, LV_ALIGN_RIGHT_MID, -8, 0);
 
         _rowObjs.push_back(row);
+    }
+
+    // Restore focus to current category
+    if (_categoryIdx >= 0 && _categoryIdx < (int)_rowObjs.size()) {
+        lv_group_focus_obj(_rowObjs[_categoryIdx]);
     }
 }
 
@@ -816,12 +824,11 @@ void LvSettingsScreen::rebuildItemList() {
 
         lv_obj_t* row = lv_obj_create(_scrollContainer);
         lv_obj_set_size(row, Theme::CONTENT_W, 22);
-        lv_obj_set_style_bg_color(row, lv_color_hex(
-            (selected && editable) ? Theme::SELECTION_BG : Theme::BG), 0);
-        lv_obj_set_style_bg_opa(row, LV_OPA_COVER, 0);
-        lv_obj_set_style_border_width(row, 0, 0);
+        lv_obj_add_style(row, LvTheme::styleListBtn(), 0);
+        if (editable) {
+            lv_obj_add_style(row, LvTheme::styleListBtnFocused(), LV_STATE_FOCUSED);
+        }
         lv_obj_set_style_pad_all(row, 0, 0);
-        lv_obj_set_style_radius(row, 0, 0);
         lv_obj_clear_flag(row, LV_OBJ_FLAG_SCROLLABLE);
         if (editable) {
             lv_obj_add_flag(row, LV_OBJ_FLAG_CLICKABLE);
@@ -829,7 +836,6 @@ void LvSettingsScreen::rebuildItemList() {
             lv_obj_add_event_cb(row, [](lv_event_t* e) {
                 auto* self = (LvSettingsScreen*)lv_event_get_user_data(e);
                 int idx = (int)(intptr_t)lv_obj_get_user_data(lv_event_get_target(e));
-                // Cancel any in-progress edit before switching items
                 if (self->_editing || self->_textEditing || self->_freqEditing) {
                     self->_editing = false;
                     self->_textEditing = false;
@@ -841,6 +847,10 @@ void LvSettingsScreen::rebuildItemList() {
                 tap.enter = true;
                 self->handleKey(tap);
             }, LV_EVENT_CLICKED, this);
+            lv_group_add_obj(LvInput::group(), row);
+            lv_obj_add_event_cb(row, [](lv_event_t* e) {
+                lv_obj_scroll_to_view(lv_event_get_target(e), LV_ANIM_ON);
+            }, LV_EVENT_FOCUSED, nullptr);
         }
 
         // Label
@@ -911,6 +921,12 @@ void LvSettingsScreen::rebuildItemList() {
 
         _rowObjs.push_back(row);
     }
+
+    // Restore focus to the currently selected item after rebuild
+    int focusOffset = _selectedIdx - _catRangeStart;
+    if (focusOffset >= 0 && focusOffset < (int)_rowObjs.size()) {
+        lv_group_focus_obj(_rowObjs[focusOffset]);
+    }
 }
 
 void LvSettingsScreen::rebuildWifiList() {
@@ -944,25 +960,48 @@ void LvSettingsScreen::rebuildWifiList() {
         return;
     }
 
+    // Make header tappable to go back
+    lv_obj_add_flag(headerRow, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_add_event_cb(headerRow, [](lv_event_t* e) {
+        auto* self = (LvSettingsScreen*)lv_event_get_user_data(e);
+        self->_view = SettingsView::ITEM_LIST;
+        self->rebuildItemList();
+    }, LV_EVENT_CLICKED, this);
+
     for (int i = 0; i < (int)_wifiResults.size(); i++) {
         auto& net = _wifiResults[i];
-        bool selected = (i == _wifiPickerIdx);
 
         lv_obj_t* row = lv_obj_create(_scrollContainer);
         lv_obj_set_size(row, Theme::CONTENT_W, 22);
-        lv_obj_set_style_bg_color(row, lv_color_hex(selected ? Theme::SELECTION_BG : Theme::BG), 0);
+        lv_obj_add_style(row, LvTheme::styleListBtn(), 0);
+        lv_obj_add_style(row, LvTheme::styleListBtnFocused(), LV_STATE_FOCUSED);
         lv_obj_set_style_bg_opa(row, LV_OPA_COVER, 0);
         lv_obj_set_style_border_width(row, 0, 0);
         lv_obj_set_style_pad_all(row, 0, 0);
-        lv_obj_set_style_radius(row, 0, 0);
         lv_obj_clear_flag(row, LV_OBJ_FLAG_SCROLLABLE);
+        lv_obj_add_flag(row, LV_OBJ_FLAG_CLICKABLE);
+        lv_obj_set_user_data(row, (void*)(intptr_t)i);
+        lv_obj_add_event_cb(row, [](lv_event_t* e) {
+            auto* self = (LvSettingsScreen*)lv_event_get_user_data(e);
+            int idx = (int)(intptr_t)lv_obj_get_user_data(lv_event_get_target(e));
+            if (idx < (int)self->_wifiResults.size()) {
+                auto& net = self->_wifiResults[idx];
+                if (self->_cfg) { self->_cfg->settings().wifiSTASSID = net.ssid; self->applyAndSave(); }
+            }
+            self->_view = SettingsView::ITEM_LIST;
+            self->rebuildItemList();
+        }, LV_EVENT_CLICKED, this);
+        lv_group_add_obj(LvInput::group(), row);
+        lv_obj_add_event_cb(row, [](lv_event_t* e) {
+            lv_obj_scroll_to_view(lv_event_get_target(e), LV_ANIM_ON);
+        }, LV_EVENT_FOCUSED, nullptr);
 
         // Lock + SSID
         char buf[48];
         snprintf(buf, sizeof(buf), "%s %s", net.encrypted ? "*" : " ", net.ssid.c_str());
         lv_obj_t* lbl = lv_label_create(row);
         lv_obj_set_style_text_font(lbl, font, 0);
-        lv_obj_set_style_text_color(lbl, lv_color_hex(selected ? Theme::ACCENT : Theme::PRIMARY), 0);
+        lv_obj_set_style_text_color(lbl, lv_color_hex(Theme::PRIMARY), 0);
         lv_label_set_text(lbl, buf);
         lv_obj_align(lbl, LV_ALIGN_LEFT_MID, 4, 0);
 
@@ -1056,23 +1095,11 @@ void LvSettingsScreen::exitToCategories() {
 bool LvSettingsScreen::handleKey(const KeyEvent& event) {
     switch (_view) {
         case SettingsView::CATEGORY_LIST: {
-            if (event.up) {
-                if (_categoryIdx > 0) {
-                    int prev = _categoryIdx;
-                    _categoryIdx--;
-                    updateCategorySelection(prev, _categoryIdx);
-                }
-                return true;
-            }
-            if (event.down) {
-                if (_categoryIdx < (int)_categories.size() - 1) {
-                    int prev = _categoryIdx;
-                    _categoryIdx++;
-                    updateCategorySelection(prev, _categoryIdx);
-                }
-                return true;
-            }
+            // LVGL focus group handles up/down navigation
             if (event.enter || event.character == '\n' || event.character == '\r') {
+                // Get focused category from LVGL group
+                lv_obj_t* focused = lv_group_get_focused(LvInput::group());
+                if (focused) _categoryIdx = (int)(intptr_t)lv_obj_get_user_data(focused);
                 enterCategory(_categoryIdx);
                 return true;
             }
@@ -1188,23 +1215,14 @@ bool LvSettingsScreen::handleKey(const KeyEvent& event) {
                 return true;
             }
 
-            // Browse mode
-            if (event.up) {
-                int prev = _selectedIdx;
-                skipToNextEditable(-1);
-                if (_selectedIdx != prev) updateItemSelection(prev, _selectedIdx);
-                return true;
-            }
-            if (event.down) {
-                int prev = _selectedIdx;
-                skipToNextEditable(1);
-                if (_selectedIdx != prev) updateItemSelection(prev, _selectedIdx);
-                return true;
-            }
+            // Browse mode — LVGL focus group handles up/down
             if (event.del || event.character == 8 || event.character == 0x1B) {
                 exitToCategories(); return true;
             }
             if (event.enter || event.character == '\n' || event.character == '\r') {
+                // Sync _selectedIdx from LVGL focus
+                lv_obj_t* focused = lv_group_get_focused(LvInput::group());
+                if (focused) _selectedIdx = (int)(intptr_t)lv_obj_get_user_data(focused);
                 if (!isEditable(_selectedIdx)) return true;
                 auto& item = _items[_selectedIdx];
                 if (item.type == SettingType::ACTION) {
@@ -1252,26 +1270,15 @@ bool LvSettingsScreen::handleKey(const KeyEvent& event) {
         }
 
         case SettingsView::WIFI_PICKER: {
-            if (event.up) {
-                if (_wifiPickerIdx > 0) {
-                    int prev = _wifiPickerIdx;
-                    _wifiPickerIdx--;
-                    updateWifiSelection(prev, _wifiPickerIdx);
-                }
-                return true;
-            }
-            if (event.down) {
-                if (_wifiPickerIdx < (int)_wifiResults.size() - 1) {
-                    int prev = _wifiPickerIdx;
-                    _wifiPickerIdx++;
-                    updateWifiSelection(prev, _wifiPickerIdx);
-                }
-                return true;
-            }
+            // LVGL handles up/down navigation, click handler handles selection
             if (event.enter || event.character == '\n' || event.character == '\r') {
-                if (_wifiPickerIdx < (int)_wifiResults.size()) {
-                    auto& net = _wifiResults[_wifiPickerIdx];
-                    if (_cfg) { _cfg->settings().wifiSTASSID = net.ssid; applyAndSave(); }
+                lv_obj_t* focused = lv_group_get_focused(LvInput::group());
+                if (focused) {
+                    int idx = (int)(intptr_t)lv_obj_get_user_data(focused);
+                    if (idx < (int)_wifiResults.size()) {
+                        auto& net = _wifiResults[idx];
+                        if (_cfg) { _cfg->settings().wifiSTASSID = net.ssid; applyAndSave(); }
+                    }
                 }
                 _view = SettingsView::ITEM_LIST;
                 rebuildItemList();

@@ -125,7 +125,17 @@ static bool s_keyReady = false;
 static unsigned long s_lastTouchMs = 0;
 static bool s_cursorVisible = false;
 
+// Suppress touch for 300ms after trackball/keyboard use to prevent accidental taps
+static unsigned long s_lastKeyMs = 0;
+static constexpr unsigned long TOUCH_SUPPRESS_MS = 300;
+
 static void touchpad_read_cb(lv_indev_drv_t *indev_driver, lv_indev_data_t *data) {
+    // Ignore touch input briefly after trackball/keyboard use
+    if (millis() - s_lastKeyMs < TOUCH_SUPPRESS_MS) {
+        data->state = LV_INDEV_STATE_REL;
+        return;
+    }
+
     if (s_touch->isTouched()) {
         lv_obj_clear_flag(s_cursor, LV_OBJ_FLAG_HIDDEN);
         s_cursorVisible = true;
@@ -144,6 +154,7 @@ static void touchpad_read_cb(lv_indev_drv_t *indev_driver, lv_indev_data_t *data
 
 static void keypad_read_cb(lv_indev_drv_t* drv, lv_indev_data_t* data) {
     if (s_keyReady) {
+        s_lastKeyMs = millis();
         lv_obj_add_flag(s_cursor, LV_OBJ_FLAG_HIDDEN);
         data->key = s_lastKey;
         data->state = s_keyState;
@@ -199,8 +210,8 @@ void feedKey(const KeyEvent& evt) {
     uint32_t key = 0;
 
     if (evt.enter) key = LV_KEY_ENTER;
-    else if (evt.up) key = LV_KEY_UP;
-    else if (evt.down) key = LV_KEY_DOWN;
+    else if (evt.up) key = LV_KEY_PREV;
+    else if (evt.down) key = LV_KEY_NEXT;
     else if (evt.left) key = LV_KEY_LEFT;
     else if (evt.right) key = LV_KEY_RIGHT;
     else if (evt.del) key = LV_KEY_BACKSPACE;

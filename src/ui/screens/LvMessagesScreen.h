@@ -27,8 +27,7 @@ public:
 
 private:
     void rebuildList();
-    void syncVisibleRows();
-    void updateSelection(int oldIdx, int newIdx);
+    int getFocusedPeerIdx() const;
 
     LXMFManager* _lxmf = nullptr;
     AnnounceManager* _am = nullptr;
@@ -36,24 +35,14 @@ private:
     OpenCallback _onOpen;
     int _lastConvCount = -1;
     int _lastUnreadTotal = 0;
-    int _selectedIdx = 0;
-    int _viewportStart = 0;
     std::vector<std::string> _sortedPeers;
     enum LongPressState { LP_NONE, LP_MENU, LP_CONFIRM_DELETE };
     LongPressState _lpState = LP_NONE;
-    int _menuIdx = 0;  // 0=Add Friend, 1=Delete Chat, 2=Cancel
+    int _lpPeerIdx = -1;
+    int _menuIdx = 0;
 
     lv_obj_t* _list = nullptr;
     lv_obj_t* _lblEmpty = nullptr;
-    std::vector<lv_obj_t*> _rows;
-
-    // Object pool for conversation rows
-    static constexpr int ROW_POOL_SIZE = 10;
-    lv_obj_t* _poolRows[ROW_POOL_SIZE] = {};
-    lv_obj_t* _poolNameLabels[ROW_POOL_SIZE] = {};
-    lv_obj_t* _poolPreviewLabels[ROW_POOL_SIZE] = {};
-    lv_obj_t* _poolTimeLabels[ROW_POOL_SIZE] = {};
-    lv_obj_t* _poolDots[ROW_POOL_SIZE] = {};
 
     // Cached sorted conversation data
     struct ConvInfo {
