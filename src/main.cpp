@@ -195,11 +195,11 @@ static void reloadTCPClients() {
                 snprintf(name, sizeof(name), "TCP.%s", ep.host.c_str());
                 auto* tcp = new TCPClientInterface(ep.host.c_str(), ep.port, name);
                 tcpIfaces.emplace_back(tcp);
-                tcpIfaces.back().mode(RNS::Type::Interface::MODE_GATEWAY);
+                tcpIfaces.back().mode(RNS::Type::Interface::MODE_FULL);
                 RNS::Transport::register_interface(tcpIfaces.back());
                 tcp->start();
                 tcpClients.push_back(tcp);
-                Serial.printf("[TCP] Created client: %s:%d (registered with Transport, mode=GATEWAY)\n", ep.host.c_str(), ep.port);
+                Serial.printf("[TCP] Created client: %s:%d (registered with Transport, mode=FULL)\n", ep.host.c_str(), ep.port);
                 Serial.printf("[TCP] Total interfaces registered: %d\n", (int)RNS::Transport::get_interfaces().size());
             }
         }
