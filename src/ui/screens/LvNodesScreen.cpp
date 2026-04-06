@@ -110,6 +110,7 @@ void LvNodesScreen::destroyUI() {
 void LvNodesScreen::onEnter() {
     _lastNodeCount = -1;
     _lastContactCount = -1;
+    _focusActive = false;
     rebuildList();
 }
 
@@ -253,6 +254,12 @@ void LvNodesScreen::rebuildList() {
         lv_obj_update_layout(_list);
         lv_obj_scroll_to_y(_list, scrollY, LV_ANIM_OFF);
     }
+
+    // Clear auto-focus if user hasn't started navigating yet
+    if (!_focusActive) {
+        lv_obj_t* focused = lv_group_get_focused(LvInput::group());
+        if (focused) lv_obj_clear_state(focused, LV_STATE_FOCUSED | LV_STATE_FOCUS_KEY);
+    }
 }
 
 int LvNodesScreen::getFocusedNodeIdx() const {
@@ -269,6 +276,10 @@ void LvNodesScreen::showActionMenu(int nodeIdx) {
     _actionState = NodeAction::ACTION_MENU;
     _nicknameText = "";
     if (_overlay) {
+        if (_am && nodeIdx >= 0 && nodeIdx < (int)_am->nodes().size()) {
+            bool isSaved = _am->nodes()[nodeIdx].saved;
+            lv_label_set_text(_menuLabels[0], isSaved ? "Edit Name" : "Add Contact");
+        }
         for (int i = 0; i < 3; i++) lv_obj_clear_flag(_menuBtns[i], LV_OBJ_FLAG_HIDDEN);
         lv_obj_add_flag(_nicknameBox, LV_OBJ_FLAG_HIDDEN);
         lv_obj_clear_flag(_overlay, LV_OBJ_FLAG_HIDDEN);
@@ -328,6 +339,15 @@ bool LvNodesScreen::handleLongPress() {
 
 bool LvNodesScreen::handleKey(const KeyEvent& event) {
     if (!_am) return false;
+
+    // --- Focus activation guard (only in browse mode) ---
+    if (_actionState == NodeAction::BROWSE && !_confirmDelete &&
+        !_focusActive && (event.up || event.down || event.enter)) {
+        _focusActive = true;
+        lv_obj_t* focused = lv_group_get_focused(LvInput::group());
+        if (focused) lv_obj_add_state(focused, LV_STATE_FOCUSED | LV_STATE_FOCUS_KEY);
+        return true;
+    }
 
     // --- Nickname input mode ---
     if (_actionState == NodeAction::NICKNAME_INPUT) {
@@ -403,9 +423,7 @@ bool LvNodesScreen::handleKey(const KeyEvent& event) {
     if (_confirmDelete) {
         if (event.enter || event.character == '\n' || event.character == '\r') {
             if (_actionNodeIdx >= 0 && _actionNodeIdx < (int)_am->nodes().size()) {
-                auto& nodes = const_cast<std::vector<DiscoveredNode>&>(_am->nodes());
-                nodes.erase(nodes.begin() + _actionNodeIdx);
-                _am->saveContacts();
+                _am->deleteContact(_actionNodeIdx);
                 if (_ui) _ui->lvStatusBar().showToast("Contact deleted", 1200);
                 rebuildList();
             }

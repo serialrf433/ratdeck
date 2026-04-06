@@ -34,6 +34,7 @@ void LvMessagesScreen::createUI(lv_obj_t* parent) {
 
 void LvMessagesScreen::onEnter() {
     _lastConvCount = -1;
+    _focusActive = false;
     rebuildList();
 }
 
@@ -168,6 +169,12 @@ void LvMessagesScreen::rebuildList() {
             lv_obj_set_pos(prevLbl, leftPad, 20);
         }
     }
+
+    // Clear auto-focus if user hasn't started navigating yet
+    if (!_focusActive) {
+        lv_obj_t* focused = lv_group_get_focused(LvInput::group());
+        if (focused) lv_obj_clear_state(focused, LV_STATE_FOCUSED | LV_STATE_FOCUS_KEY);
+    }
 }
 
 int LvMessagesScreen::getFocusedPeerIdx() const {
@@ -189,6 +196,13 @@ bool LvMessagesScreen::handleLongPress() {
 
 bool LvMessagesScreen::handleKey(const KeyEvent& event) {
     if (!_lxmf) return false;
+
+    if (!_focusActive && (event.up || event.down || event.enter)) {
+        _focusActive = true;
+        lv_obj_t* focused = lv_group_get_focused(LvInput::group());
+        if (focused) lv_obj_add_state(focused, LV_STATE_FOCUSED | LV_STATE_FOCUS_KEY);
+        return true;
+    }
 
     // Long-press menu mode
     if (_lpState == LP_MENU) {

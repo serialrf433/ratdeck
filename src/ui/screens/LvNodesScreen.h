@@ -43,6 +43,7 @@ private:
     UserConfig* _cfg = nullptr;
     NodeSelectedCallback _onSelect;
     bool _confirmDelete = false;
+    bool _focusActive = false;
 
     // Action modal state
     NodeAction _actionState = NodeAction::BROWSE;

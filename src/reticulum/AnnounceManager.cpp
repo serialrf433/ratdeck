@@ -360,6 +360,18 @@ void AnnounceManager::removeContact(const std::string& hexHash) {
     if (_flash) { _flash->remove((String(PATH_CONTACTS) + filename).c_str()); }
 }
 
+bool AnnounceManager::deleteContact(int nodeIdx) {
+    if (nodeIdx < 0 || nodeIdx >= (int)_nodes.size()) return false;
+    std::string hexHash = _nodes[nodeIdx].hash.toHex();
+    removeContact(hexHash);
+    _nameCache.erase(hexHash);
+    _nameCacheDirty = true;
+    _nodes.erase(_nodes.begin() + nodeIdx);
+    rebuildIndex();
+    Serial.printf("[ANNOUNCE] Deleted contact %s\n", hexHash.substr(0, 12).c_str());
+    return true;
+}
+
 void AnnounceManager::loadContacts() {
     int loaded = 0;
     auto loadFromDir = [&](File& dir) {

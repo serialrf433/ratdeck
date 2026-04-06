@@ -38,6 +38,7 @@ public:
     void setLocalDestHash(const RNS::Bytes& hash) { _localDestHash = hash; }
     void saveContacts();
     void loadContacts();
+    bool deleteContact(int nodeIdx);
     void loop();  // Call from main loop — handles deferred saves
 
     // Name cache: persists hash→name mappings so names survive reboots

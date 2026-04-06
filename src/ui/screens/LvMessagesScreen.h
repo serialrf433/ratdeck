@@ -35,6 +35,7 @@ private:
     OpenCallback _onOpen;
     int _lastConvCount = -1;
     int _lastUnreadTotal = 0;
+    bool _focusActive = false;
     std::vector<std::string> _sortedPeers;
     enum LongPressState { LP_NONE, LP_MENU, LP_CONFIRM_DELETE };
     LongPressState _lpState = LP_NONE;

@@ -30,6 +30,7 @@ void LvContactsScreen::createUI(lv_obj_t* parent) {
 
 void LvContactsScreen::onEnter() {
     _lastContactCount = -1;
+    _focusActive = false;
     rebuildList();
 }
 
@@ -108,6 +109,12 @@ void LvContactsScreen::rebuildList() {
         lv_label_set_text(lblHash, shortHash.c_str());
         lv_obj_align(lblHash, LV_ALIGN_RIGHT_MID, -8, 0);
     }
+
+    // Clear auto-focus if user hasn't started navigating yet
+    if (!_focusActive) {
+        lv_obj_t* focused = lv_group_get_focused(LvInput::group());
+        if (focused) lv_obj_clear_state(focused, LV_STATE_FOCUSED | LV_STATE_FOCUS_KEY);
+    }
 }
 
 bool LvContactsScreen::handleLongPress() {
@@ -124,14 +131,19 @@ bool LvContactsScreen::handleLongPress() {
 bool LvContactsScreen::handleKey(const KeyEvent& event) {
     if (!_am || _contactIndices.empty()) return false;
 
+    if (!_focusActive && (event.up || event.down || event.enter)) {
+        _focusActive = true;
+        lv_obj_t* focused = lv_group_get_focused(LvInput::group());
+        if (focused) lv_obj_add_state(focused, LV_STATE_FOCUSED | LV_STATE_FOCUS_KEY);
+        return true;
+    }
+
     if (_confirmDelete) {
         if (event.enter || event.character == '\n' || event.character == '\r') {
             if (_deleteIdx >= 0 && _deleteIdx < (int)_contactIndices.size()) {
                 int nodeIdx = _contactIndices[_deleteIdx];
                 if (nodeIdx >= 0 && nodeIdx < (int)_am->nodes().size()) {
-                    auto& nodes = const_cast<std::vector<DiscoveredNode>&>(_am->nodes());
-                    nodes.erase(nodes.begin() + nodeIdx);
-                    _am->saveContacts();
+                    _am->deleteContact(nodeIdx);
                     if (_ui) _ui->lvStatusBar().showToast("Contact deleted", 1200);
                     rebuildList();
                 }

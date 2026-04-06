@@ -30,6 +30,7 @@ private:
     class UIManager* _ui = nullptr;
     NodeSelectedCallback _onSelect;
     bool _confirmDelete = false;
+    bool _focusActive = false;
     int _deleteIdx = -1;
     int _lastContactCount = -1;
     std::vector<int> _contactIndices;
