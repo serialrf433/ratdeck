@@ -108,9 +108,16 @@ void Power::setState(State newState) {
     switch (_state) {
         case ACTIVE:
             if (oldState == SCREEN_OFF) {
+                // Pre-load correct brightness into LovyanGFX state before wakeup.
+                // wakeup() sends SLPOUT then restores LGFX's internal _brightness
+                // to the LEDC — with this ordering, it restores the correct value
+                // instead of a stale 0, eliminating the rapid 0→0→correct triple-
+                // write that can cause missed LEDC duty updates on ESP32-S3.
+                display.setBrightness(percentToPWM(_brightnessPct));
                 display.wakeup();
+            } else {
+                display.setBrightness(percentToPWM(_brightnessPct));
             }
-            display.setBrightness(percentToPWM(_brightnessPct));
             if (_kbAutoOn) {
                 keyboard.backlightOn();
             }
@@ -122,7 +129,8 @@ void Power::setState(State newState) {
             }
             break;
         case SCREEN_OFF:
-            display.setBrightness(0);
+            // LovyanGFX sleep() sets brightness to 0 internally — no
+            // need to call setBrightness(0) beforehand.
             display.sleep();
             if (_kbAutoOff) {
                 keyboard.backlightOff();

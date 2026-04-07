@@ -22,8 +22,18 @@ public:
 
     // Display backlight — accepts percentage 1-100
     void setBrightness(uint8_t percent);
-    void setDimTimeout(uint16_t seconds) { _dimTimeout = seconds * 1000UL; }
-    void setOffTimeout(uint16_t seconds) { _offTimeout = seconds * 1000UL; }
+    void setDimTimeout(uint16_t seconds) {
+        _dimTimeout = seconds * 1000UL;
+        if (_offTimeout > 0 && _offTimeout <= _dimTimeout) {
+            _offTimeout = _dimTimeout + 10000UL;
+        }
+    }
+    void setOffTimeout(uint16_t seconds) {
+        _offTimeout = seconds * 1000UL;
+        if (_offTimeout > 0 && _offTimeout <= _dimTimeout) {
+            _offTimeout = _dimTimeout + 10000UL;
+        }
+    }
 
     // Keyboard backlight — accepts percentage 1-100
     void setKbBrightness(uint8_t percent, bool apply=false);

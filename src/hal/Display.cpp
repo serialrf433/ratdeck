@@ -20,7 +20,7 @@ static void lvgl_flush_cb(lv_disp_drv_t* drv, const lv_area_t* area, lv_color_t*
 bool Display::begin() {
     _gfx.init();
     _gfx.setRotation(1);  // Landscape: 320x240
-    _gfx.setBrightness(128);
+    _gfx.setBrightness(0);
     _gfx.fillScreen(TFT_BLACK);
 
     Serial.printf("[DISPLAY] Initialized: %dx%d (rotation=1, LovyanGFX direct)\n",
